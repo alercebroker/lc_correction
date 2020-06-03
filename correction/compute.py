@@ -11,6 +11,9 @@ from astropy.time import Time
 
 DISTANCE_THRESHOLD = 1.4
 SCORE_THRESHOLD = 0.4
+CHINR_THRESHOLD = 2
+SHARPNR_MAX = 0.1
+SHARPNR_MIN = -0.13
 
 
 def validate_object(candidate, is_first_detection):
@@ -21,14 +24,14 @@ def validate_object(candidate, is_first_detection):
             stellar_object = True
             stellar_magstats = True
         else:
-            if candidate["distnr"] < DISTANCE_THRESHOLD and candidate["chinr"] < 2 and candidate["sharpnr"] > -0.13 and candidate["sharpnr"] < 0.1:
+            if candidate["distnr"] < DISTANCE_THRESHOLD and candidate["chinr"] < CHINR_THRESHOLD and candidate["sharpnr"] > SHARPNR_MIN and candidate["sharpnr"] < SHARPNR_MAX:
                 stellar_magstats = True
     else:
         if candidate["distnr"] < DISTANCE_THRESHOLD:
             if stellar_object:
                 stellar_magstats = True
             else:
-                if candidate["chinr"] < 2 and candidate["sharpnr"] > -0.13 and candidate["sharpnr"] < 0.1:
+                if candidate["chinr"] < CHINR_THRESHOLD and candidate["sharpnr"] > SHARPNR_MIN and candidate["sharpnr"] < SHARPNR_MAX:
                     stellar_magstats = True
     return stellar_object, stellar_magstats
 

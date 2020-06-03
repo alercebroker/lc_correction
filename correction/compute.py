@@ -1,5 +1,5 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 from astropy.time import Time
 #import logging
 
@@ -9,8 +9,54 @@ from astropy.time import Time
 #                    datefmt='%Y-%m-%d %H:%M:%S',)
 
 
-def validate_object():
-    return
+DISTANCE_THRESHOLD = 1.4
+SCORE_THRESHOLD = 0.4
+
+
+def validate_object(candidate, is_first_detection):
+    stellar_object = False
+    stellar_magstats = False
+    if is_first_detection:
+        if candidate["distpsnr1"] < DISTANCE_THRESHOLD and candidate["distpsnr1"] < DISTANCE_THRESHOLD and candidate["sgscore1"] > SCORE_THRESHOLD:
+            stellar_object = True
+            stellar_magstats = True
+        else:
+            if candidate["distnr"] < DISTANCE_THRESHOLD and candidate["chinr"] < 2 and candidate["sharpnr"] > -0.13 and candidate["sharpnr"] < 0.1:
+                stellar_magstats = True
+    else:
+        if candidate["distnr"] < DISTANCE_THRESHOLD:
+            if stellar_object:
+                stellar_magstats = True
+            else:
+                if candidate["chinr"] < 2 and candidate["sharpnr"] > -0.13 and candidate["sharpnr"] < 0.1:
+                    stellar_magstats = True
+    return stellar_object, stellar_magstats
+
+
+def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos):
+    aux1 = np.power(10, -0.4 * magnr)
+    aux2 = isdiffpos * np.power(10, -0.4 * magpsf)
+    aux3 = aux1 + aux2
+    magpsf_corr = -2.5 * np.log10(aux3)
+    sigmapsf_corr = aux2 * sigmapsf/aux3
+    sigmapsf_corr_ref = np.sqrt(np.power(aux1, 2) * np.power(sigmagnr, 2) + np.power(aux2, 2) * np.power(sigmapsf, 2))/aux3
+    return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ref
+
+
+def apply_correction(candidate, first_magnr=None):
+    isdiffpos = 1 if (candidate["isdiffpos"] in ["t", "1"]) else -1
+    magnr = candidate["magnr"]
+    magpsf = candidate['magpsf']
+    sigmagnr = candidate['sigmagnr']
+    sigmapsf = candidate['sigmapsf']
+
+    magpsf_corr, sigmapsf_corr, sigmapsf_corr_ref = correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos)
+
+    if first_magnr:
+        magnr_aux = first_magnr - magnr
+        magpsf_corr = magpsf_corr + magnr_aux
+
+    return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ref
 
 
 def get_prv_candidates(message, light_curve):
@@ -61,33 +107,6 @@ def get_prv_candidates(message, light_curve):
                         "candid": str(prv_cand["candid"]),
                         "parent_candidate": str(message["candid"])
                     }
-                    prv_cands.append(detection_args)
+                    prv_cands.append(detection_args) #
                     light_curve["detections"].append(detection_args)
         return light_curve, prv_cands
-
-
-def correct_magnitude(magref, sign, magdiff):
-    result = np.nan
-    try:
-        aux = np.power(10, (-0.4 * magref)) + sign * np.power(10, (-0.4 * magdiff))
-        result = -2.5 * np.log10(aux)
-    except Exception as e:
-        #logging.exception("Correct magnitude failed: {}".format(e))
-        return
-    return result
-
-
-def correct_sigma_mag(magref, sigmagref, sign, magdiff, sigmagdiff):
-    result = np.nan
-    try:
-        auxref = np.power(10, (-0.4 * magref))
-        auxdiff = np.power(10, (-0.4 * magdiff))
-        aux = auxref + sign * auxdiff
-
-        result = np.sqrt(np.power((auxref * sigmagref), 2) +
-                         np.power((auxdiff * sigmagdiff), 2)) / aux
-
-    except Exception as e:
-        #logging.exception("Correct sigma magnitude failed: {}".format(e))
-        return
-    return result

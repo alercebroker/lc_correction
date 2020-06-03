@@ -36,6 +36,37 @@ def validate_object(candidate, is_first_detection):
     return stellar_object, stellar_magstats
 
 
+def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats=None, is_first_detection=False)
+    if candidate["distnr"] < DISTANCE_THRESHOLD:
+        corr_detection = True
+        flag = False
+        if is_first_detection:
+            corr_magstats = True
+        else: 
+            if corr_magstats == False:
+                flag = True
+    else: 
+        corr_detection = False
+        if is_first_detection:
+            corr_magstats = False
+            isdiffpos = 1 if (candidate["isdiffpos"] in ["t", "1"]) else -1
+            if isdiffpos > 0:
+                flag = False
+            else:
+                flag = True
+        else: 
+            if corr_magstats == True:
+                flag = True
+            else:
+                isdiffpos = 1 if (candidate["isdiffpos"] in ["t", "1"]) else -1
+                if isdiffpos > 0:
+                    flag = False
+                 else:
+                    flag = True
+
+    return corr_detection, corr_magstats, flag
+
+
 def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos):
     aux1 = np.power(10, -0.4 * magnr)
     aux2 = isdiffpos * np.power(10, -0.4 * magpsf)

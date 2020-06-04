@@ -6,7 +6,7 @@ from astropy.time import Time
 #level = logging.INFO
 #logging.basicConfig(level=level,
 #                    format='%(asctime)s %(levelname)s %(name)s.%(funcName)s: %(message)s',
-#                    datefmt='%Y-%m-%d %H:%M:%S',)
+#                    datefmt='%Y-%m-%d %H:%M:%S',)--
 
 
 DISTANCE_THRESHOLD = 1.4

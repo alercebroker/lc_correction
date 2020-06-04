@@ -73,7 +73,8 @@ def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos):
     aux3 = aux1 + aux2
     magpsf_corr = -2.5 * np.log10(aux3)
     sigmapsf_corr = aux2 * sigmapsf/aux3
-    sigmapsf_corr_ref = np.sqrt(np.power(aux1, 2) * np.power(sigmagnr, 2) + np.power(aux2, 2) * np.power(sigmapsf, 2))/aux3
+    #sigmapsf_corr_ref = np.sqrt(np.power(aux1, 2) * np.power(sigmagnr, 2) + np.power(aux2, 2) * np.power(sigmapsf, 2))/aux3 ### old algorithm 
+    sigmapsf_corr_ref = np.sqrt(np.power(aux2, 2) * np.power(sigmapsf, 2) + (1 - 2 * isdiffpos) * np.power(aux1, 2) * np.power(sigmagnr, 2))/aux3
     return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ref
 
 

@@ -61,7 +61,7 @@ def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats
                 isdiffpos = 1 if (candidate["isdiffpos"] in ["t", "1"]) else -1
                 if isdiffpos > 0:
                     flag = False
-                 else:
+                else:
                     flag = True
 
     return corr_detection, corr_magstats, flag

@@ -36,7 +36,7 @@ def validate_object(candidate, is_first_detection):
     return stellar_object, stellar_magstats
 
 
-def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats=None, is_first_detection=False)
+def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats=None, is_first_detection=False):
     if candidate["distnr"] < DISTANCE_THRESHOLD:
         corr_detection = True
         flag = False

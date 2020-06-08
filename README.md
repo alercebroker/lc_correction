@@ -1,3 +1,8 @@
+[![Build Status](https://travis-ci.com/alercebroker/lc_correction.svg?token=ky96CzpxxqojpJq8cck6&branch=master)](https://travis-ci.com/alercebroker/lc_correction)
+[![codecov](https://codecov.io/gh/alercebroker/lc_correction/branch/master/graph/badge.svg?token=5C8D7F627W)](https://codecov.io/gh/alercebroker/lc_correction)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/alercebroker/lc_correction/blob/master/LICENSE)
+
+
 # Light curve correction library
 
 Alert magnitudes are produced after measuring the flux in an image difference, which is produced from subtracting a given observation from a reference image. This means that if the object was present in the reference image, the object’s true magnitude can be corrected. The formulas for the correction and associated error are the following:

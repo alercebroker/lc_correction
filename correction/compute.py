@@ -77,13 +77,13 @@ def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos): #Correction Algori
         if aux4 >= 0:
             sigmapsf_corr = np.sqrt(aux4) / aux3
         else:
-            sigmapsf_corr = np.nan
+            sigmapsf_corr = 100
                 
         sigmapsf_corr_ext = aux2 * sigmapsf / aux3
     else:
-        magpsf_corr = np.nan
-        sigmapsf_corr = np.nan
-        sigmapsf_corr_ext = np.nan
+        magpsf_corr = 100
+        sigmapsf_corr = 100
+        sigmapsf_corr_ext = 100
 
     return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
 

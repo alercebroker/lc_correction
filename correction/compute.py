@@ -16,8 +16,7 @@ SHARPNR_MAX = 0.1
 SHARPNR_MIN = -0.13
 
 
-def validate_object(candidate, is_first_detection):
-    stellar_object = False
+def validate_object(candidate, is_first_detection, stellar_object=False): #Algorithm 1 
     stellar_magstats = False
     if is_first_detection:
         if candidate["distpsnr1"] < DISTANCE_THRESHOLD and candidate["distpsnr1"] < DISTANCE_THRESHOLD and candidate["sgscore1"] > SCORE_THRESHOLD:
@@ -36,7 +35,7 @@ def validate_object(candidate, is_first_detection):
     return stellar_object, stellar_magstats
 
 
-def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats=None, is_first_detection=False):
+def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats=None, is_first_detection=False): #Algorithm 2
     if candidate["distnr"] < DISTANCE_THRESHOLD:
         corr_detection = True
         flag = False
@@ -67,18 +66,24 @@ def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats
     return corr_detection, corr_magstats, flag
 
 
-def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos):
+def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos): #Correction Algorithm 
     aux1 = np.power(10, -0.4 * magnr)
     aux2 = isdiffpos * np.power(10, -0.4 * magpsf)
     aux3 = aux1 + aux2
-    magpsf_corr = -2.5 * np.log10(aux3)
-    sigmapsf_corr = aux2 * sigmapsf/aux3
-    #sigmapsf_corr_ref = np.sqrt(np.power(aux1, 2) * np.power(sigmagnr, 2) + np.power(aux2, 2) * np.power(sigmapsf, 2))/aux3 ### old algorithm 
-    sigmapsf_corr_ref = np.sqrt(np.power(aux2, 2) * np.power(sigmapsf, 2) + (1 - 2 * isdiffpos) * np.power(aux1, 2) * np.power(sigmagnr, 2))/aux3
+    if aux3 > 0:
+        magpsf_corr = -2.5 * np.log10(aux3)
+        sigmapsf_corr = aux2 * sigmapsf/aux3
+        sigmapsf_corr_ref = np.sqrt(np.square(aux2) * np.square(sigmapsf) - np.square(aux1) * np.square(sigmagnr))/aux3
+
+    else:
+        magpsf_corr = np.nan
+        sigmapsf_corr = np.nan
+        sigmapsf_corr_ref = np.nan
+
     return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ref
 
 
-def apply_correction(candidate, first_magnr=None):
+def apply_correction(candidate): 
     isdiffpos = 1 if (candidate["isdiffpos"] in ["t", "1"]) else -1
     magnr = candidate["magnr"]
     magpsf = candidate['magpsf']
@@ -86,10 +91,6 @@ def apply_correction(candidate, first_magnr=None):
     sigmapsf = candidate['sigmapsf']
 
     magpsf_corr, sigmapsf_corr, sigmapsf_corr_ref = correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos)
-
-    if first_magnr:
-        magnr_aux = first_magnr - magnr
-        magpsf_corr = magpsf_corr + magnr_aux
 
     return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ref
 
@@ -142,6 +143,6 @@ def get_prv_candidates(message, light_curve):
                         "candid": str(prv_cand["candid"]),
                         "parent_candidate": str(message["candid"])
                     }
-                    prv_cands.append(detection_args) #
+                    prv_cands.append(detection_args) 
                     light_curve["detections"].append(detection_args)
         return light_curve, prv_cands

@@ -34,6 +34,7 @@ class TestZTF18aazxcwf(unittest.TestCase):
         self.avros = get_avros(self.oid)
         self.is_first_detection = {"object": True, 1: True, 2: True}
         self.first_magnr = {}
+        self.stellar_object = False
 
     # Validate object to a RRL object
     def test_validate_object(self):
@@ -43,6 +44,6 @@ class TestZTF18aazxcwf(unittest.TestCase):
         if self.is_first_detection[fid]:
             self.first_magnr[fid] = data["candidate"]["magnr"]
 
-        stellar_object, stellar_magstats = validate_object(data["candidate"], self.is_first_detection[fid])
+        stellar_object, stellar_magstats = validate_object(data["candidate"], self.is_first_detection[fid], self.stellar_object)
         self.assertTrue(stellar_object)
         self.assertTrue(stellar_magstats)

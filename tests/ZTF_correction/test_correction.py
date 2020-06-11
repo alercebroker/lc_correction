@@ -45,5 +45,6 @@ class TestZTF18aazxcwf(unittest.TestCase):
             self.first_magnr[fid] = data["candidate"]["magnr"]
 
         stellar_object, stellar_magstats = validate_object(data["candidate"], self.is_first_detection[fid], self.stellar_object)
+        self.stellar_object = stellar_object
         self.assertTrue(stellar_object)
         self.assertTrue(stellar_magstats)

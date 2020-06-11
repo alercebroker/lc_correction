@@ -72,8 +72,9 @@ def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos): #Correction Algori
     aux3 = aux1 + aux2
     if aux3 > 0:
         magpsf_corr = -2.5 * np.log10(aux3)
-        sigmapsf_corr = np.sqrt(np.square(aux2) * np.square(sigmapsf) - np.square(aux1) * np.square(sigmagnr))/aux3
-        sigmapsf_corr_ext = aux2 * sigmapsf/aux3
+        aux4 = np.square(aux2) * np.square(sigmapsf) - np.square(aux1) * np.square(sigmagnr)
+        sigmapsf_corr = np.sqrt(aux4) / aux3
+        sigmapsf_corr_ext = aux2 * sigmapsf / aux3
     else:
         magpsf_corr = np.nan
         sigmapsf_corr = np.nan

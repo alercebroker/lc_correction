@@ -72,15 +72,14 @@ def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos): #Correction Algori
     aux3 = aux1 + aux2
     if aux3 > 0:
         magpsf_corr = -2.5 * np.log10(aux3)
-        sigmapsf_corr = aux2 * sigmapsf/aux3
-        sigmapsf_corr_ref = np.sqrt(np.square(aux2) * np.square(sigmapsf) - np.square(aux1) * np.square(sigmagnr))/aux3
-
+        sigmapsf_corr = np.sqrt(np.square(aux2) * np.square(sigmapsf) - np.square(aux1) * np.square(sigmagnr))/aux3
+        sigmapsf_corr_ext = aux2 * sigmapsf/aux3
     else:
         magpsf_corr = np.nan
         sigmapsf_corr = np.nan
-        sigmapsf_corr_ref = np.nan
+        sigmapsf_corr_ext = np.nan
 
-    return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ref
+    return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
 
 
 def apply_correction(candidate): 
@@ -90,9 +89,9 @@ def apply_correction(candidate):
     sigmagnr = candidate['sigmagnr']
     sigmapsf = candidate['sigmapsf']
 
-    magpsf_corr, sigmapsf_corr, sigmapsf_corr_ref = correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos)
+    magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext = correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos)
 
-    return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ref
+    return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
 
 
 def get_prv_candidates(message, light_curve):

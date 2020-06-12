@@ -14,7 +14,7 @@ SCORE_THRESHOLD = 0.4
 CHINR_THRESHOLD = 2
 SHARPNR_MAX = 0.1
 SHARPNR_MIN = -0.13
-WEIRD = 100
+ZERO_MAG = 100.
 
 
 def validate_object(candidate, is_first_detection, stellar_object=False): #Algorithm 1 
@@ -71,7 +71,6 @@ def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos): #Correction Algori
     aux1 = 10**(-0.4 * magnr)
     aux2 = 10**(-0.4 * magpsf)
     aux3 = aux1 + isdiffpos * aux2
-    zero_mag = 100.
     if aux3 > 0:
         magpsf_corr = -2.5 * np.log10(aux3)
         aux4 = aux2**2 * sigmapsf**2 - aux1**2 * sigmagnr**2
@@ -79,13 +78,13 @@ def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos): #Correction Algori
         if aux4 >= 0:
             sigmapsf_corr = np.sqrt(aux4) / aux3
         else:
-            sigmapsf_corr = zero_mag
+            sigmapsf_corr = ZERO_MAG
                 
         sigmapsf_corr_ext = aux2 * sigmapsf / aux3
     else:
-        magpsf_corr = zero_mag
-        sigmapsf_corr = zero_mag
-        sigmapsf_corr_ext = zero_mag
+        magpsf_corr = ZERO_MAG
+        sigmapsf_corr = ZERO_MAG
+        sigmapsf_corr_ext = ZERO_MAG
 
     return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
 

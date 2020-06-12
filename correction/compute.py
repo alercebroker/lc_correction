@@ -14,6 +14,7 @@ SCORE_THRESHOLD = 0.4
 CHINR_THRESHOLD = 2
 SHARPNR_MAX = 0.1
 SHARPNR_MIN = -0.13
+WEIRD = 100
 
 
 def validate_object(candidate, is_first_detection, stellar_object=False): #Algorithm 1 

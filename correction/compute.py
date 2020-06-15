@@ -1,13 +1,5 @@
 import numpy as np
 import pandas as pd
-from astropy.time import Time
-#import logging
-
-#level = logging.INFO
-#logging.basicConfig(level=level,
-#                    format='%(asctime)s %(levelname)s %(name)s.%(funcName)s: %(message)s',
-#                    datefmt='%Y-%m-%d %H:%M:%S',)--
-
 
 DISTANCE_THRESHOLD = 1.4
 SCORE_THRESHOLD = 0.4
@@ -101,54 +93,22 @@ def apply_correction(candidate):
     return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
 
 
-def get_prv_candidates(message, light_curve):
-    oid = message["objectId"]
-    prv_cands = []
-    non_dets = []
-    if message["prv_candidates"]:
-        for prv_cand in message["prv_candidates"]:
-            mjd = prv_cand["jd"] - 2400000.5
-            if prv_cand["diffmaglim"] is not None:
-                non_detection_args = {
-                    "diffmaglim": prv_cand["diffmaglim"],
-                    "oid": oid,
-                    "mjd": mjd
-                }
+def apply_correction_df(data):
+    df = data.copy()
+    df['isdiffpos'] = df['isdiffpos'].map({'t': 1., 'f': -1.})
+    df["corr"] = df["distnr"] < 1.4
+    correction_results = df.apply(
+        lambda x: correction(x.magnr, x.magpsf, x.sigmagnr, x.sigmapsf, x.isdiffpos)
+        if x["corr"]
+        else (np.nan, np.nan, np.nan), axis=1, result_type="expand")
 
-                dt = Time(mjd, format="mjd")
-                filters = {"datetime": dt.datetime, "fid": prv_cand["fid"], "oid": message["objectId"]}
-                found = list(filter(lambda non_det: ((non_det["datetime"] == filters["datetime"]) and
-                                                     (non_det["fid"] == filters["fid"]) and
-                                                     (non_det["oid"] == filters["oid"])),
-                                    light_curve["non_detections"]))
-                if len(found) == 0:
-                    non_detection_args.update(filters)
-                    if non_detection_args not in non_dets:
-                        non_dets.append(non_detection_args)
-                        light_curve["non_detections"].append(non_detection_args)
-            else:
-                found = list(filter(lambda det: det['candid'] == prv_cand["candid"], light_curve["detections"]))
-                if len(found) == 0:
-                    # prv_cand.update(self.correct_message(prv_cand))
-                    detection_args = {
-                        "mjd": prv_cand["jd"] - 2400000.5,
-                        "fid": prv_cand["fid"],
-                        "ra": prv_cand["ra"],
-                        "dec": prv_cand["dec"],
-                        "rb": prv_cand["rb"],
-                        "magap": prv_cand["magap"],
-                        "magap_corr": prv_cand["magap_corr"],
-                        "magpsf": prv_cand["magpsf"],
-                        "magpsf_corr": prv_cand["magpsf_corr"],
-                        "sigmagap": prv_cand["sigmagap"],
-                        "sigmagap_corr": prv_cand["sigmagap_corr"],
-                        "sigmapsf": prv_cand["sigmapsf"],
-                        "sigmapsf_corr": prv_cand["sigmapsf_corr"],
-                        "oid": message["objectId"],
-                        "alert": prv_cand,
-                        "candid": str(prv_cand["candid"]),
-                        "parent_candidate": str(message["candid"])
-                    }
-                    prv_cands.append(detection_args) 
-                    light_curve["detections"].append(detection_args)
-        return light_curve, prv_cands
+    df["magpsf_corr"], df["sigmapsf_corr"], df["sigmapsf_corr_ext"] = correction_results[0], correction_results[1], correction_results[2]
+
+    idxmin = df.candid.idxmin()
+    df["corr_magstats"] = df.loc[idxmin]["corr"]
+
+    mask = ((df["corr"] == False) & (df.isdiffpos == -1)) | (df.corr_magstats & (df["corr"] == False)) | ((df.corr_magstats == False) & df["corr"])
+    df["dubious"] = mask
+
+    return df
+

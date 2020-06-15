@@ -1,10 +1,12 @@
 import os
 import fastavro
 import unittest
+import pandas as pd
 
 from correction.compute import *
 
-AVRO_PATH = "tests/data_examples/"
+AVRO_PATH = "data_examples/avros"
+CSV_PATH = "data_examples/csv"
 
 
 def read_avro(avro_path):
@@ -48,3 +50,36 @@ class TestZTF18aazxcwf(unittest.TestCase):
         self.stellar_object = stellar_object
         self.assertTrue(stellar_object)
         self.assertTrue(stellar_magstats)
+
+
+class TestDataframeCorrection(unittest.TestCase):
+    def setUp(self) -> None:
+        self.data = pd.read_csv(os.path.join(CSV_PATH, "raw_detections.csv"))
+
+    def test_apply_correction_df_c1(self):
+        dflarge = self.data.groupby(["objectId", "fid"]).apply(apply_correction_df)
+        dubious = dflarge.loc[dflarge.dubious]
+        self.assertEqual(len(dubious), 1)
+        self.assertTrue(dubious.dubious.values[0])
+
+    def test_apply_correction_df_c2(self):
+        data = self.data.copy()
+        data.at[180, "isdiffpos"] = 'f'
+        dflarge = data.groupby(["objectId", "fid"]).apply(apply_correction_df)
+        dubious = dflarge.loc[dflarge.dubious]
+        example = dubious.iloc[1]
+        self.assertEqual(len(dubious), 2)
+        self.assertFalse(example["corr"])
+        self.assertFalse(example["corr_magstats"])
+        self.assertTrue(example["dubious"])
+
+    def test_apply_correction_df_c3(self):
+        data = self.data.copy()
+        data.at[150, "distnr"] = 0.1
+        dflarge = data.groupby(["objectId", "fid"]).apply(apply_correction_df)
+        dubious = dflarge.loc[dflarge.dubious]
+        example = dubious.iloc[1]
+        self.assertEqual(len(dubious), 2)
+        self.assertTrue(example["corr"])
+        self.assertFalse(example["corr_magstats"])
+        self.assertTrue(example["dubious"])

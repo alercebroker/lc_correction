@@ -66,7 +66,13 @@ def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats
 
 
 def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos, oid): #Correction Algorithm
+    # sometimes these values are -999
+    if magnr < 0 or magpsf < 0:
+        return np.nan, np.nan, np.nan
+
+    # do correction
     try:
+        
         aux1 = 10**(-0.4 * magnr)
         aux2 = 10**(-0.4 * magpsf)
         aux3 = aux1 + isdiffpos * aux2

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 
 DISTANCE_THRESHOLD = 1.4
 SCORE_THRESHOLD = 0.4
@@ -96,7 +97,7 @@ def apply_correction(candidate):
 def apply_correction_df(data):
     df = data.copy()
     df['isdiffpos'] = df['isdiffpos'].map({'t': 1., 'f': -1.})
-    df["corr"] = df["distnr"] < 1.4
+    df["corr"] = df["distnr"] < DISTANCE_THRESHOLD
     correction_results = df.apply(
         lambda x: correction(x.magnr, x.magpsf, x.sigmagnr, x.sigmapsf, x.isdiffpos)
         if x["corr"]
@@ -112,3 +113,7 @@ def apply_correction_df(data):
 
     return df
 
+
+def apply_parallel(df_groups, func, n=1):
+    response = Parallel(n_jobs=n)(delayed(func)(group) for name, group in df_groups)
+    return pd.DataFrame.from_dict(response)

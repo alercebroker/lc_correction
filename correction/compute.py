@@ -10,7 +10,9 @@ SHARPNR_MAX = 0.1
 SHARPNR_MIN = -0.13
 ZERO_MAG = 100.
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s %(levelname)s %(name)s.%(funcName)s: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S',)
 
 
 def validate_object(candidate, is_first_detection, stellar_object=False): #Algorithm 1 

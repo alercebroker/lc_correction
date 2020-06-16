@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import logging
 from joblib import Parallel, delayed
 
 DISTANCE_THRESHOLD = 1.4
@@ -8,6 +9,8 @@ CHINR_THRESHOLD = 2
 SHARPNR_MAX = 0.1
 SHARPNR_MIN = -0.13
 ZERO_MAG = 100.
+
+logging.basicConfig(level=logging.INFO)
 
 
 def validate_object(candidate, is_first_detection, stellar_object=False): #Algorithm 1 
@@ -60,29 +63,33 @@ def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats
     return corr_detection, corr_magstats, flag
 
 
-def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos): #Correction Algorithm 
-    aux1 = 10**(-0.4 * magnr)
-    aux2 = 10**(-0.4 * magpsf)
-    aux3 = aux1 + isdiffpos * aux2
-    if aux3 > 0:
-        magpsf_corr = -2.5 * np.log10(aux3)
-        aux4 = aux2**2 * sigmapsf**2 - aux1**2 * sigmagnr**2
+def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos, oid): #Correction Algorithm
+    try:
+        aux1 = 10**(-0.4 * magnr)
+        aux2 = 10**(-0.4 * magpsf)
+        aux3 = aux1 + isdiffpos * aux2
+        if aux3 > 0:
+            magpsf_corr = -2.5 * np.log10(aux3)
+            aux4 = aux2**2 * sigmapsf**2 - aux1**2 * sigmagnr**2
 
-        if aux4 >= 0:
-            sigmapsf_corr = np.sqrt(aux4) / aux3
+            if aux4 >= 0:
+                sigmapsf_corr = np.sqrt(aux4) / aux3
+            else:
+                sigmapsf_corr = ZERO_MAG
+
+            sigmapsf_corr_ext = aux2 * sigmapsf / aux3
         else:
+            magpsf_corr = ZERO_MAG
             sigmapsf_corr = ZERO_MAG
-                
-        sigmapsf_corr_ext = aux2 * sigmapsf / aux3
-    else:
-        magpsf_corr = ZERO_MAG
-        sigmapsf_corr = ZERO_MAG
-        sigmapsf_corr_ext = ZERO_MAG
+            sigmapsf_corr_ext = ZERO_MAG
 
-    return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
+        return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
+    except Exception as e:
+        logging.error('Object {}: {}'.format(oid, e))
+        return np.nan, np.nan, np.nan
 
 
-def apply_correction(candidate): 
+def apply_correction(candidate):
     isdiffpos = 1 if (candidate["isdiffpos"] in ["t", "1"]) else -1
     magnr = candidate["magnr"]
     magpsf = candidate['magpsf']
@@ -99,7 +106,7 @@ def apply_correction_df(data):
     df['isdiffpos'] = df['isdiffpos'].map({'t': 1., 'f': -1.})
     df["corr"] = df["distnr"] < DISTANCE_THRESHOLD
     correction_results = df.apply(
-        lambda x: correction(x.magnr, x.magpsf, x.sigmagnr, x.sigmapsf, x.isdiffpos)
+        lambda x: correction(x.magnr, x.magpsf, x.sigmagnr, x.sigmapsf, x.isdiffpos, x.objectId)
         if x["corr"]
         else (np.nan, np.nan, np.nan), axis=1, result_type="expand")
 

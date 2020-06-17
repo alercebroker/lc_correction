@@ -9,13 +9,14 @@ CHINR_THRESHOLD = 2
 SHARPNR_MAX = 0.1
 SHARPNR_MIN = -0.13
 ZERO_MAG = 100.
+TRIPLE_NAN = (np.nan, np.nan, np.nan)
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(name)s.%(funcName)s: %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',)
 
 
-def validate_object(candidate, is_first_detection, stellar_object=False): #Algorithm 1 
+def validate_object(candidate, is_first_detection, stellar_object=False):
     stellar_magstats = False
     if is_first_detection:
         if candidate["distpsnr1"] < DISTANCE_THRESHOLD and candidate["distpsnr1"] < DISTANCE_THRESHOLD and candidate["sgscore1"] > SCORE_THRESHOLD:
@@ -65,14 +66,13 @@ def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats
     return corr_detection, corr_magstats, flag
 
 
-def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos, oid): #Correction Algorithm
+def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos, oid=None):
     # sometimes these values are -999
     if magnr < 0 or magpsf < 0:
-        return np.nan, np.nan, np.nan
+        return TRIPLE_NAN
 
     # do correction
     try:
-        
         aux1 = 10**(-0.4 * magnr)
         aux2 = 10**(-0.4 * magpsf)
         aux3 = aux1 + isdiffpos * aux2
@@ -94,7 +94,7 @@ def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos, oid): #Correction A
         return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
     except Exception as e:
         logging.error('Object {}: {}'.format(oid, e))
-        return np.nan, np.nan, np.nan
+        return TRIPLE_NAN
 
 
 def apply_correction(candidate):
@@ -108,6 +108,13 @@ def apply_correction(candidate):
 
     return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
 
+
+def near_distance(first_distnr, first_distpsnr1, first_sgscore1, first_chinr, first_sharpnr):
+    nearZTF = first_distnr < 1.4
+    nearPS1 = first_distpsnr1 < 1.4
+    stellarPS1 = first_sgscore1 > 0.4
+    stellarZTF = first_chinr < CHINR_THRESHOLD and SHARPNR_MIN < first_sharpnr < SHARPNR_MAX
+    return nearZTF, nearPS1, stellarPS1, stellarZTF
 
 def apply_correction_df(data):
     df = data.copy()
@@ -125,10 +132,38 @@ def apply_correction_df(data):
 
     mask = ((df["corr"] == False) & (df.isdiffpos == -1)) | (df.corr_magstats & (df["corr"] == False)) | ((df.corr_magstats == False) & df["corr"])
     df["dubious"] = mask
-
     return df
+
+
+def get_magstats(df):
+    response = {}
+    idxmin = df.candid.idxmin()
+    idxmax = df.candid.idxmax()
+    nearZTF, nearPS1, stellarPS1, stellarZTF = near_distance(df.loc[idxmin].distnr,
+                                                             df.loc[idxmin].distpsnr1,
+                                                             df.loc[idxmin].sgscore1,
+                                                             df.loc[idxmin].chinr,
+                                                             df.loc[idxmin].sharpnr)
+    response["objectId"] = df.loc[idxmin].objectId
+    response["fid"] = df.loc[idxmin].fid
+    response["ndet"] = len(df)
+    response["rfid"] = df.loc[idxmin].rfid
+    response["nrfid"] = len(df.rfid.dropna().unique())
+    response["magnr"] = df.loc[idxmin].magnr
+    response["stellar_object"] = (nearZTF & nearPS1 & stellarPS1) | (nearZTF & ~nearPS1 & stellarZTF)
+    response["stellar_magstats"] = (nearZTF & stellarZTF)
+    response["magap_mean"] = df.magap.mean()
+    response["magap_median"] = df.magap.median()
+    response["magap_max"] = df.magap.max()
+    response["magap_min"] = df.magap.min()
+    response["magap_fisrt"] = df.loc[idxmin].magap
+    response["magap_last"] = df.loc[idxmax].magap
+    response["first_mjd"] = df.loc[idxmin].jd - 2400000.5
+    response["last_mjd"] = df.loc[idxmax].jd - 2400000.5
+    response = pd.DataFrame([response])
+    return response
 
 
 def apply_parallel(df_groups, func, n=1):
     response = Parallel(n_jobs=n)(delayed(func)(group) for name, group in df_groups)
-    return pd.DataFrame.from_dict(response)
+    return pd.concat(response)

@@ -67,11 +67,9 @@ def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats
 
 
 def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos, oid=None):
-    # sometimes these values are -999
     if magnr < 0 or magpsf < 0:
         return TRIPLE_NAN
 
-    # do correction
     try:
         aux1 = 10**(-0.4 * magnr)
         aux2 = 10**(-0.4 * magpsf)
@@ -110,15 +108,15 @@ def apply_correction(candidate):
 
 
 def near_distance(first_distnr, first_distpsnr1, first_sgscore1, first_chinr, first_sharpnr):
-    nearZTF = first_distnr < 1.4
-    nearPS1 = first_distpsnr1 < 1.4
-    stellarPS1 = first_sgscore1 > 0.4
+    nearZTF = first_distnr < DISTANCE_THRESHOLD
+    nearPS1 = first_distpsnr1 < DISTANCE_THRESHOLD
+    stellarPS1 = first_sgscore1 > SCORE_THRESHOLD
     stellarZTF = first_chinr < CHINR_THRESHOLD and SHARPNR_MIN < first_sharpnr < SHARPNR_MAX
     return nearZTF, nearPS1, stellarPS1, stellarZTF
 
 def apply_correction_df(data):
     df = data.copy()
-    df['isdiffpos'] = df['isdiffpos'].map({'t': 1., 'f': -1.})
+    df['isdiffpos'] = df['isdiffpos'].map({'t': 1., 'f': -1., '1': 1, '0': -1})
     df["corr"] = df["distnr"] < DISTANCE_THRESHOLD
     correction_results = df.apply(
         lambda x: correction(x.magnr, x.magpsf, x.sigmagnr, x.sigmapsf, x.isdiffpos, x.objectId)

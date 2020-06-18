@@ -69,7 +69,7 @@ class TestDataframeCorrection(unittest.TestCase):
         dubious = dflarge.loc[dflarge.dubious]
         example = dubious.iloc[1]
         self.assertEqual(len(dubious), 2)
-        self.assertFalse(example["corr"])
+        self.assertFalse(example["corrected"])
         self.assertFalse(example["corr_magstats"])
         self.assertTrue(example["dubious"])
 
@@ -80,6 +80,6 @@ class TestDataframeCorrection(unittest.TestCase):
         dubious = dflarge.loc[dflarge.dubious]
         example = dubious.iloc[1]
         self.assertEqual(len(dubious), 2)
-        self.assertTrue(example["corr"])
+        self.assertTrue(example["corrected"])
         self.assertFalse(example["corr_magstats"])
         self.assertTrue(example["dubious"])

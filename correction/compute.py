@@ -66,7 +66,7 @@ def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats
     return corr_detection, corr_magstats, flag
 
 
-def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos, oid=None):
+def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos, oid=None, candid=None):
     if magnr < 0 or magpsf < 0:
         return TRIPLE_NAN
 
@@ -90,6 +90,7 @@ def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos, oid=None):
             sigmapsf_corr_ext = ZERO_MAG
 
         return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
+
     except Exception as e:
         logging.error('Object {}: {}'.format(oid, e))
         return TRIPLE_NAN

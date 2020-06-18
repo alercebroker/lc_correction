@@ -70,7 +70,6 @@ class TestDataframeCorrection(unittest.TestCase):
         example = dubious.iloc[1]
         self.assertEqual(len(dubious), 2)
         self.assertFalse(example["corrected"])
-        self.assertFalse(example["corr_magstats"])
         self.assertTrue(example["dubious"])
 
     def test_apply_correction_df_c3(self):
@@ -81,5 +80,4 @@ class TestDataframeCorrection(unittest.TestCase):
         example = dubious.iloc[1]
         self.assertEqual(len(dubious), 2)
         self.assertTrue(example["corrected"])
-        self.assertFalse(example["corr_magstats"])
         self.assertTrue(example["dubious"])

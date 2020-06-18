@@ -124,7 +124,14 @@ def is_dubious(corrected, isdiffpos, corr_magstats):
     return (~corrected & (isdiffpos == -1)) | (corr_magstats & ~corrected) | (~corr_magstats & corrected)
 
 
-def apply_correction_df(data):
+def dmdt(magpsf_first, sigmapsf_first, nd_diffmaglim, mjd_first, nd_mjd):
+    dm_sigma = magpsf_first + sigmapsf_first - nd_diffmaglim
+    dt = mjd_first - nd_mjd
+    dmsigdt = (dm_sigma / dt)
+    return dm_sigma, dt, dmsigdt
+
+
+def apply_correction_df(data, parallel=False):
     # create copy of dataframe
     df = data.copy()
     df.set_index("candid", inplace=True)
@@ -140,10 +147,12 @@ def apply_correction_df(data):
 
     corr_magstats = df.loc[df.index.min()]["corrected"]
     df["dubious"] = is_dubious(df["corrected"], df['isdiffpos'], corr_magstats)
-    return df
+    if parallel:
+        return df
+    return df.drop(["objectId", "fid"], axis=1)
 
 
-def get_magstats(df):
+def apply_mag_stats(df):
     response = {}
     # minimum and maximum candid
     idxmin = df.index.min()
@@ -151,31 +160,103 @@ def get_magstats(df):
 
     # corrected at the first detection?
     response['corrected'] = df.loc[idxmin]["corrected"]
+    response["nearZTF"], response["nearPS1"], response["stellarZTF"], response["stellarPS1"] = near_stellar(df.loc[idxmin].distnr,
+                                                                                                            df.loc[idxmin].distpsnr1,
+                                                                                                            df.loc[idxmin].sgscore1,
+                                                                                                            df.loc[idxmin].chinr,
+                                                                                                            df.loc[idxmin].sharpnr)
+    response["stellar"] = is_stellar(response["nearZTF"], response["nearPS1"], response["stellarZTF"], response["stellarPS1"])
+    # number of detections and dubious detections
+    response["ndet"] = df.shape[0]
+    response["ndubious"] = df.dubious.sum()
 
-    nearZTF, nearPS1, stellarPS1, stellarZTF = near_stellar(df.loc[idxmin].distnr,
-                                                             df.loc[idxmin].distpsnr1,
-                                                             df.loc[idxmin].sgscore1,
-                                                             df.loc[idxmin].chinr,
-                                                             df.loc[idxmin].sharpnr)
-    response["stellar"] = is_stellar(nearZTF, nearPS1, stellarPS1, stellarZTF)
-    response["objectId"] = df.loc[idxmin].objectId
-    response["fid"] = df.loc[idxmin].fid
-    response["ndet"] = len(df)
-    response["rfid"] = df.loc[idxmin].rfid
+    # reference id
     response["nrfid"] = len(df.rfid.dropna().unique())
-    response["magnr"] = df.loc[idxmin].magnr
-    response["stellar_object"] = (nearZTF & nearPS1 & stellarPS1) | (nearZTF & ~nearPS1 & stellarZTF)
-    response["stellar_magstats"] = (nearZTF & stellarZTF)
+
+    # psf magnitude statatistics
+    response["magpsf_mean"] = df.magpsf.mean()
+    response["magpsf_median"] = df.magpsf.median()
+    response["magpsf_max"] = df.magpsf.max()
+    response["magpsf_min"] = df.magpsf.min()
+    response["magpsf_first"] = df.loc[idxmin].magpsf
+    response["sigmapsf_first"] = df.loc[idxmin].sigmapsf
+    response["magpsf_last"] = df.loc[idxmax].magpsf
+
+    # psf corrected magnitude statatistics
+    response["magpsf_corr_mean"] = df.magpsf_corr.mean()
+    response["magpsf_corr_median"] = df.magpsf_corr.median()
+    response["magpsf_corr_max"] = df.magpsf_corr.max()
+    response["magpsf_corr_min"] = df.magpsf_corr.min()
+    response["magpsf_corr_first"] = df.loc[idxmin].magpsf_corr
+    response["magpsf_corr_last"] = df.loc[idxmax].magpsf_corr
+
+    # corrected psf magnitude statistics
     response["magap_mean"] = df.magap.mean()
     response["magap_median"] = df.magap.median()
     response["magap_max"] = df.magap.max()
     response["magap_min"] = df.magap.min()
-    response["magap_fisrt"] = df.loc[idxmin].magap
+    response["magap_first"] = df.loc[idxmin].magap
     response["magap_last"] = df.loc[idxmax].magap
-    response["first_mjd"] = df.loc[idxmin].jd - 2400000.5
-    response["last_mjd"] = df.loc[idxmax].jd - 2400000.5
-    response = pd.DataFrame([response])
-    return response
+
+    # time statistics
+    response["first_mjd"] = df.loc[idxmin].mjd
+    response["last_mjd"] = df.loc[idxmax].mjd
+    return pd.Series(response)
+
+
+def apply_object_stats(df):
+    response = {}
+    response["nearZTF"] = df.nearZTF.all()
+    response["nearPS1"] = df.nearPS1.all()
+    response["stellar"] = df.stellar.all()
+    response["corrected"] = df.corrected.all()
+    response["ndet"] = df.ndet.sum()  # sum of detections in all bands
+    response["ndubious"] = df.ndubious.sum()  # sum of dubious corrections in all bands
+    return pd.Series(response)
+
+
+def do_dmdt(nd, magstats, dt_min=0.5):
+    response = {}
+    mjd_first = magstats.first_mjd.iloc[0]
+    mask = nd.mjd < mjd_first - dt_min
+    response["close_nondet"] = nd.loc[mask].mjd.max() < nd.loc[nd.mjd < mjd_first].mjd.max()
+    # is there some non-detection before the first detection
+    if mask.sum() > 0:
+        magpsf_first = magstats.magpsf_first.iloc[0]
+        sigmapsf_first = magstats.sigmapsf_first.iloc[0]
+        # assume the worst case
+        dm_sigma, dt, dmsigdt = dmdt(magpsf_first,
+                                     sigmapsf_first,
+                                     nd.loc[mask].diffmaglim,
+                                     mjd_first,
+                                     nd.loc[mask].mjd)
+        idxmin = dmsigdt.idxmin()
+        response["dmdt_first"] = dmsigdt.loc[idxmin]
+        response["dm_first"] = magpsf_first - nd.diffmaglim.loc[idxmin]
+        response["sigmadm_first"] = sigmapsf_first - nd.diffmaglim.loc[idxmin]
+        response["dt_first"] = dt.loc[idxmin]
+    else:
+        response["dmdt_first"] = np.nan
+        response["dm_first"] = np.nan
+        response["sigmadm_first"] = np.nan
+        response["dt_first"] = np.nan
+
+    return pd.Series(response)
+
+
+def do_dmdt_df(magstats, non_dets):
+    g_mags = magstats.groupby(["objectId", "fid"])
+    g_nd = non_dets.groupby(["objectId", "fid"])
+    idxs = g_mags.indices.keys()
+    result = []
+    for idx in idxs:
+        if idx in g_nd.indices.keys():
+            non_dets_g = g_nd.get_group(idx)
+            magstats_g = g_mags.get_group(idx)
+            resp = do_dmdt(non_dets_g, magstats_g)
+            resp["objectId"], resp["fid"] = idx[0], idx[1]
+            result.append(resp)
+    return pd.DataFrame.from_records(result, index=["objectId", "fid"])
 
 
 def apply_parallel(df_groups, func, n=1):

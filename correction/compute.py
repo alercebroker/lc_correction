@@ -115,23 +115,31 @@ def near_distance(first_distnr, first_distpsnr1, first_sgscore1, first_chinr, fi
     stellarZTF = first_chinr < CHINR_THRESHOLD and SHARPNR_MIN < first_sharpnr < SHARPNR_MAX
     return nearZTF, nearPS1, stellarPS1, stellarZTF
 
+def is_dubious(corrected, isdiffpos, corr_magstats):
+    return ((df["corrected"] == False) & (df.isdiffpos == -1)) | (df.corr_magstats & (df["corrected"] == False)) | ((df.corr_magstats == False) & df["corrected"])
+
 def apply_correction_df(data):
+    # create copy of dataframe
     df = data.copy()
-    df['isdiffpos'] = df['isdiffpos'].map({'t': 1., 'f': -1., '1': 1, '0': -1})
-    df["corr"] = df["distnr"] < DISTANCE_THRESHOLD
+    df.set_index("candid", inplace=True)
+
+    df['isdiffpos'] = df['isdiffpos'].map({'t': 1., 'f': -1., '1': 1., '0': -1.})
+    df["corrected"] = df["distnr"] < DISTANCE_THRESHOLD
     correction_results = df.apply(
         lambda x: correction(x.magnr, x.magpsf, x.sigmagnr, x.sigmapsf, x.isdiffpos, x.objectId)
-        if x["corr"]
+        if x["corrected"]
         else (np.nan, np.nan, np.nan), axis=1, result_type="expand")
 
     df["magpsf_corr"], df["sigmapsf_corr"], df["sigmapsf_corr_ext"] = correction_results[0], correction_results[1], correction_results[2]
 
     idxmin = df.candid.idxmin()
-    df["corr_magstats"] = df.loc[idxmin]["corr"]
+    corr_magstats = df.loc[df.index.min()]["corrected"]
 
-    mask = ((df["corr"] == False) & (df.isdiffpos == -1)) | (df.corr_magstats & (df["corr"] == False)) | ((df.corr_magstats == False) & df["corr"])
+    
     df["dubious"] = mask
     return df
+
+
 
 
 def get_magstats(df):

@@ -108,15 +108,21 @@ def apply_correction(candidate):
     return magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
 
 
-def near_distance(first_distnr, first_distpsnr1, first_sgscore1, first_chinr, first_sharpnr):
-    nearZTF = first_distnr < DISTANCE_THRESHOLD
-    nearPS1 = first_distpsnr1 < DISTANCE_THRESHOLD
+def near_stellar(first_distnr, first_distpsnr1, first_sgscore1, first_chinr, first_sharpnr):
+    nearZTF = 0 <= first_distnr < DISTANCE_THRESHOLD
+    nearPS1 = 0 <= first_distpsnr1 < DISTANCE_THRESHOLD
     stellarPS1 = first_sgscore1 > SCORE_THRESHOLD
     stellarZTF = first_chinr < CHINR_THRESHOLD and SHARPNR_MIN < first_sharpnr < SHARPNR_MAX
     return nearZTF, nearPS1, stellarPS1, stellarZTF
 
+
+def is_stellar(nearZTF, nearPS1, stellarPS1, stellarZTF):
+    return (nearZTF & nearPS1 & stellarPS1) | (nearZTF & ~nearPS1 & stellarZTF)
+
+
 def is_dubious(corrected, isdiffpos, corr_magstats):
-    return ((df["corrected"] == False) & (df.isdiffpos == -1)) | (df.corr_magstats & (df["corrected"] == False)) | ((df.corr_magstats == False) & df["corrected"])
+    return (~corrected & (isdiffpos == -1)) | (corr_magstats & ~corrected) | (~corr_magstats & corrected)
+
 
 def apply_correction_df(data):
     # create copy of dataframe
@@ -132,25 +138,26 @@ def apply_correction_df(data):
 
     df["magpsf_corr"], df["sigmapsf_corr"], df["sigmapsf_corr_ext"] = correction_results[0], correction_results[1], correction_results[2]
 
-    idxmin = df.candid.idxmin()
     corr_magstats = df.loc[df.index.min()]["corrected"]
-
-    
-    df["dubious"] = mask
+    df["dubious"] = is_dubious(df["corrected"], df['isdiffpos'], corr_magstats)
     return df
-
-
 
 
 def get_magstats(df):
     response = {}
-    idxmin = df.candid.idxmin()
-    idxmax = df.candid.idxmax()
-    nearZTF, nearPS1, stellarPS1, stellarZTF = near_distance(df.loc[idxmin].distnr,
+    # minimum and maximum candid
+    idxmin = df.index.min()
+    idxmax = df.index.max()
+
+    # corrected at the first detection?
+    response['corrected'] = df.loc[idxmin]["corrected"]
+
+    nearZTF, nearPS1, stellarPS1, stellarZTF = near_stellar(df.loc[idxmin].distnr,
                                                              df.loc[idxmin].distpsnr1,
                                                              df.loc[idxmin].sgscore1,
                                                              df.loc[idxmin].chinr,
                                                              df.loc[idxmin].sharpnr)
+    response["stellar"] = is_stellar(nearZTF, nearPS1, stellarPS1, stellarZTF)
     response["objectId"] = df.loc[idxmin].objectId
     response["fid"] = df.loc[idxmin].fid
     response["ndet"] = len(df)

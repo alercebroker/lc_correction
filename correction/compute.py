@@ -67,6 +67,30 @@ def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats
 
 
 def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos, oid=None, candid=None):
+    """Do correction in psf magnitude
+
+    Parameters
+    ----------
+    magnr : :py:class:`float`
+            Descrption
+    magpsf : :py:class:`float`
+            Descrption
+    sigmagnr : :py:class:`float`
+            Descrption
+    sigmapsf : :py:class:`float`
+            Descrption
+    isdiffpos : :py:class:`int`
+            Descrption
+    oid : :py:class:`str`
+            Descrption
+    candid : :py:class:`str`
+            Descrption
+
+    Returns
+    -------
+    :py:class:`string`
+        Tuple -> magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
+    """
     if magnr < 0 or magpsf < 0:
         return TRIPLE_NAN
 
@@ -131,9 +155,9 @@ def dmdt(magpsf_first, sigmapsf_first, nd_diffmaglim, mjd_first, nd_mjd):
     return dm_sigma, dt, dmsigdt
 
 
-def apply_correction_df(data, parallel=False):
+def apply_correction_df(df, parallel=False):
     # create copy of dataframe
-    df = data.copy()
+    # df = data.copy()
     df.set_index("candid", inplace=True)
 
     df['isdiffpos'] = df['isdiffpos'].map({'t': 1., 'f': -1., '1': 1., '0': -1.})

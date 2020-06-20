@@ -241,6 +241,7 @@ def apply_object_stats(df):
 
 def do_dmdt(nd, magstats, dt_min=0.5):
     response = {}
+    nd.reset_index(inplace=True)
     mjd_first = magstats.first_mjd.iloc[0]
     mask = nd.mjd < mjd_first - dt_min
     response["close_nondet"] = nd.loc[mask].mjd.max() < nd.loc[nd.mjd < mjd_first].mjd.max()

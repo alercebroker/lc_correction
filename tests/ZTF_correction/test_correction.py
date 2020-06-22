@@ -52,6 +52,14 @@ class TestZTF18aazxcwf(unittest.TestCase):
         self.assertTrue(stellar_object)
         self.assertTrue(stellar_magstats)
 
+    def test_correction(self):
+        candidate = self.avros[0]["candidate"]
+        correct_candidate = apply_correction(candidate)
+        self.assertEqual(len(correct_candidate), 3)
+        self.assertAlmostEqual(correct_candidate[0], 16.387620303061944)
+        self.assertAlmostEqual(correct_candidate[1], 100.)
+        self.assertAlmostEqual(correct_candidate[2], 0.02641869927986706)
+
 
 class TestDataframeCorrection(unittest.TestCase):
     def setUp(self) -> None:

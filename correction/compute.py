@@ -42,7 +42,7 @@ def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats
         if is_first_detection:
             corr_magstats = True
         else: 
-            if corr_magstats == False:
+            if not corr_magstats:
                 flag = True
     else: 
         corr_detection = False

@@ -15,7 +15,7 @@ def read_avro(avro_path):
         try:
             reader = fastavro.reader(file)
             data = reader.next()
-        except Exception as e:
+        except Exception:
            return None
     return data
 

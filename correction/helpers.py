@@ -1,4 +1,5 @@
 import pandas as pd
+# import numpy as np
 
 COL_DATA_QUALITY = ['aimage', 'aimagerat', 'bimage', 'bimagerat', 'candid', 'chipsf', 'classtar', 'fid', 'fwhm',
                    'mindtoedge', 'nbad', 'nneg', 'objectId', 'scorr', 'seeratio', 'sky', 'sumrat', 'xpos', 'ypos']
@@ -8,7 +9,7 @@ COL_PS1_ZTF = ['sgscore1', 'szmag1', 'srmag2', 'nmtchps', 'distpsnr3', 'objectid
                'objectidps1', 'simag2', 'objectidps3', 'szmag3', 'srmag1']
 COL_CORRECTED = ['objectId', 'candid', 'mjd', 'fid', 'pid', 'diffmaglim', 'isdiffpos', 'nid', 'ra', 'dec', 'magpsf',
                  'sigmapsf', 'magap', 'sigmagap', 'distnr', 'rb', 'magapbig', 'sigmagapbig', 'rfid', 'magpsf_corr',
-                 'sigmapsf_corr', 'sigmapsf_corr_ext', 'corrected', 'dubious']
+                 'sigmapsf_corr', 'sigmapsf_corr_ext', 'corrected', 'dubious', 'has_stamp', 'parent_candid', 'step_id_corr']
 
 
 def get_data_quality(df):
@@ -27,5 +28,8 @@ def get_ps1_ztf(df):
     return df.groupby(["objectId", "fid"]).apply(ps1).reset_index()
 
 
-def get_clean_corrected(df):
+def get_clean_corrected(df, step_name=None):
+    df["has_stamp"] = (df["parent_candid"] == 0)
+    df['step_id_corr'] = 'corr_bulk_0.0.1' if step_name is None else step_name
+    # df.loc[(df["parent_candid"] == 0), "parent_candid"] = np.nan
     return df.reset_index()[COL_CORRECTED]

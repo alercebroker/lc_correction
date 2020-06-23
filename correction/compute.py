@@ -253,6 +253,17 @@ def apply_objstats_from_magstats(df):
     response["corrected"] = df.corrected.all()
     response["ndet"] = df.ndet.sum()  # sum of detections in all bands
     response["ndubious"] = df.ndubious.sum()  # sum of dubious corrections in all bands
+    if len(df.index) == 2:
+        oid = df.index[0][0]
+        response["g-r_max"] = df.loc[oid, 1]["magpsf_min"] - df.loc[oid, 2]["magpsf_min"]  # 1=g ; 2=r
+        response["g-r_max_corr"] = df.loc[oid, 1]["magpsf_corr_min"] - df.loc[oid, 2]["magpsf_corr_min"]
+        response["g-r_mean"] = df.loc[oid, 1]["magpsf_mean"] - df.loc[oid, 2]["magpsf_mean"]
+        response["g-r_mean_corr"] = df.loc[oid, 1]["magpsf_corr_mean"] - df.loc[oid, 2]["magpsf_corr_mean"]
+    else:
+        response["g-r_max"] = np.nan
+        response["g-r_max_corr"] = np.nan
+        response["g-r_mean"] = np.nan
+        response["g-r_mean_corr"] = np.nan
     return pd.Series(response)
 
 

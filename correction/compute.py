@@ -228,7 +228,24 @@ def apply_mag_stats(df):
     return pd.Series(response)
 
 
-def apply_object_stats(df):
+def apply_objstats_from_correction(df):
+    response = {}
+    idxmax = df.mjd.idxmax()
+    response["ndethist"] = df.loc[idxmax].ndethist
+    response["ncovhist"] = df.loc[idxmax].ncovhist
+    response["mjdstarthist"] = df.loc[idxmax].jdstarthist - 2400000.5
+    response["mjdendhist"] = df.loc[idxmax].jdendhist - 2400000.5
+    response["meanra"] = df.ra.mean()
+    response["meandec"] = df.dec.mean()
+    response["sigmara"] = df.ra.std()
+    response["sigmadec"] = df.dec.std()
+    response["firstmjd"] = df.mjd.min()
+    response["lastmjd"] = df.loc[idxmax].mjd
+    response["deltamjd"] = response["lastmjd"] - response["firstmjd"]
+    return pd.Series(response)
+
+
+def apply_objstats_from_magstats(df):
     response = {}
     response["nearZTF"] = df.nearZTF.all()
     response["nearPS1"] = df.nearPS1.all()
@@ -237,6 +254,12 @@ def apply_object_stats(df):
     response["ndet"] = df.ndet.sum()  # sum of detections in all bands
     response["ndubious"] = df.ndubious.sum()  # sum of dubious corrections in all bands
     return pd.Series(response)
+
+
+def apply_object_stats_df(corrected, magstats):
+    basic_stats = corrected.groupby("objectId").apply(apply_objstats_from_correction)
+    obj_magstats = magstats.groupby("objectId").apply(apply_objstats_from_magstats)
+    return basic_stats.join(obj_magstats)
 
 
 def do_dmdt(nd, magstats, dt_min=0.5):

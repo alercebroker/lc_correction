@@ -105,7 +105,9 @@ class TestDataframeCorrectionChain(unittest.TestCase):
                               'magpsf_first', 'sigmapsf_first', 'magpsf_last', 'magpsf_corr_mean', 'magpsf_corr_median',
                               'magpsf_corr_max', 'magpsf_corr_min', 'magpsf_corr_first', 'magpsf_corr_last', 'magap_mean',
                               'magap_median', 'magap_max', 'magap_min', 'magap_first', 'magap_last', 'first_mjd', 'last_mjd']
-        self.objstats_cols = ['nearZTF', 'nearPS1', 'stellar', 'corrected', 'ndet', 'ndubious']
+        self.objstats_cols = ['ndethist', 'ncovhist', 'mjdstarthist', 'mjdendhist', 'meanra', 'meandec', 'sigmara',
+                              'sigmadec', 'firstmjd', 'lastmjd', 'deltamjd', 'nearZTF', 'nearPS1', 'stellar', 'corrected',
+                              'ndet', 'ndubious']
         self.detections["mjd"] = self.detections.jd - 2400000.5
         del self.detections["jd"]
         self.non_detections["mjd"] = self.non_detections.jd - 2400000.5
@@ -132,9 +134,8 @@ class TestDataframeCorrectionChain(unittest.TestCase):
             self.assertIn(col, magstats.columns)
 
     def test_apply_object_stats(self):
-        objstats = self.magstats.groupby(["objectId", "fid"]).apply(apply_object_stats)
-        self.assertEqual(len(objstats.index.levels[0]), 10)
-        self.assertEqual(len(objstats), 16)
+        objstats = apply_object_stats_df(self.corrected, self.magstats)
+        self.assertEqual(len(objstats), 10)
         for col in self.objstats_cols:
             self.assertIn(col, objstats.columns)
         self.assertEqual(objstats.ndubious.sum(), 4)

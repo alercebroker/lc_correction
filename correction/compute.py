@@ -253,12 +253,14 @@ def apply_objstats_from_magstats(df):
     response["corrected"] = df.corrected.all()
     response["ndet"] = df.ndet.sum()  # sum of detections in all bands
     response["ndubious"] = df.ndubious.sum()  # sum of dubious corrections in all bands
-    if len(df.index) == 2:
-        oid = df.index[0][0]
-        response["g-r_max"] = df.loc[oid, 1]["magpsf_min"] - df.loc[oid, 2]["magpsf_min"]  # 1=g ; 2=r
-        response["g-r_max_corr"] = df.loc[oid, 1]["magpsf_corr_min"] - df.loc[oid, 2]["magpsf_corr_min"]
-        response["g-r_mean"] = df.loc[oid, 1]["magpsf_mean"] - df.loc[oid, 2]["magpsf_mean"]
-        response["g-r_mean_corr"] = df.loc[oid, 1]["magpsf_corr_mean"] - df.loc[oid, 2]["magpsf_corr_mean"]
+    fids = df.fid.unique()
+    if 1 in fids and 2 in fids:
+        g = df[df["fid"] == 1].T.squeeze()
+        r = df[df["fid"] == 2].T.squeeze()
+        response["g-r_max"] = g["magpsf_min"] - r["magpsf_min"]  # 1=g ; 2=r
+        response["g-r_max_corr"] = g["magpsf_corr_min"] - r["magpsf_corr_min"]
+        response["g-r_mean"] = g["magpsf_mean"] - r["magpsf_mean"]
+        response["g-r_mean_corr"] = g["magpsf_corr_mean"] - r["magpsf_corr_mean"]
     else:
         response["g-r_max"] = np.nan
         response["g-r_max_corr"] = np.nan
@@ -267,9 +269,10 @@ def apply_objstats_from_magstats(df):
     return pd.Series(response)
 
 
-def apply_object_stats_df(corrected, magstats):
+def apply_object_stats_df(corrected, magstats, step_name=None):
     basic_stats = corrected.groupby("objectId").apply(apply_objstats_from_correction)
     obj_magstats = magstats.groupby("objectId").apply(apply_objstats_from_magstats)
+    basic_stats['step_id_corr'] = 'corr_bulk_0.0.1' if step_name is None else step_name
     return basic_stats.join(obj_magstats)
 
 

@@ -98,6 +98,8 @@ class TestDataframeCorrectionChain(unittest.TestCase):
         self.non_detections = pd.read_parquet(os.path.join(PARQUET_PATH, "10_objects_non_detections.parquet"))
         self.corrected = pd.read_parquet(os.path.join(PARQUET_PATH, "10_objects_corrected.parquet"))
         self.magstats = pd.read_parquet(os.path.join(PARQUET_PATH, "10_objects_magstats.parquet"))
+        self.corrected.reset_index(inplace=True)
+        self.magstats.reset_index(inplace=True)
         self.unique_objects = 10
         self.corrected_cols = ["corrected", "magpsf_corr", "sigmapsf_corr", "sigmapsf_corr_ext", "dubious"]
         self.magstats_cols = ['corrected', 'nearZTF', 'nearPS1', 'stellarZTF', 'stellarPS1', 'stellar', 'ndet',

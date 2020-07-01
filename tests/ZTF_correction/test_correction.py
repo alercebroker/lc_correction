@@ -3,7 +3,7 @@ import fastavro
 import unittest
 import pandas as pd
 
-from correction.compute import *
+from lc_correction.compute import *
 
 AVRO_PATH = "data_examples/avros"
 CSV_PATH = "data_examples/csv"

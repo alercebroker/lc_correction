@@ -1,5 +1,4 @@
 import pandas as pd
-# import numpy as np
 
 COL_DATA_QUALITY = ['aimage', 'aimagerat', 'bimage', 'bimagerat', 'candid', 'chipsf', 'classtar', 'fid', 'fwhm',
                    'mindtoedge', 'nbad', 'nneg', 'objectId', 'scorr', 'seeratio', 'sky', 'sumrat', 'xpos', 'ypos']

@@ -1,8 +1,8 @@
 import os
 import unittest
 
-from correction.compute import *
-from correction.helpers import *
+from lc_correction.compute import *
+from lc_correction.helpers import *
 
 PARQUET_PATH = "data_examples/parquets"
 

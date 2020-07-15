@@ -41,10 +41,10 @@ def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats
         flag = False
         if is_first_detection:
             corr_magstats = True
-        else: 
+        else:
             if not corr_magstats:
                 flag = True
-    else: 
+    else:
         corr_detection = False
         if is_first_detection:
             corr_magstats = False
@@ -53,7 +53,7 @@ def validate_magnitudes(candidate, corr_detection=None, flag=None, corr_magstats
                 flag = False
             else:
                 flag = True
-        else: 
+        else:
             if corr_magstats == True:
                 flag = True
             else:
@@ -176,7 +176,7 @@ def apply_correction_df(df, parallel=False):
     return df.drop(["objectId", "fid"], axis=1)
 
 
-def apply_mag_stats(df):
+def apply_mag_stats(df, distnr= None, distpsnr1 = None, sgscore1 = None, chinr = None, sharpnr = None):
     response = {}
     # minimum and maximum candid
     idxmin = df.index.min()
@@ -184,11 +184,18 @@ def apply_mag_stats(df):
 
     # corrected at the first detection?
     response['corrected'] = df.loc[idxmin]["corrected"]
-    response["nearZTF"], response["nearPS1"], response["stellarZTF"], response["stellarPS1"] = near_stellar(df.loc[idxmin].distnr,
-                                                                                                            df.loc[idxmin].distpsnr1,
-                                                                                                            df.loc[idxmin].sgscore1,
-                                                                                                            df.loc[idxmin].chinr,
-                                                                                                            df.loc[idxmin].sharpnr)
+
+    distnr = df.loc[idxmin].distnr if distnr is None else distnr
+    distpsnr1 = df.loc[idxmin].distpsnr1 if distpsnr1 is None else distpsnr1
+    sgscore1 = df.loc[idxmin].sgscore1 if sgscore1 is None else sgscore1
+    chinr = df.loc[idxmin].chinr if chinr is None else chinr
+    sharpnr = df.loc[idxmin].sharpnr if sharpnr is None else sharpnr
+
+    response["nearZTF"], response["nearPS1"], response["stellarZTF"], response["stellarPS1"] = near_stellar(distnr,
+                                                                                                            distpsnr1,
+                                                                                                            sgscore1,
+                                                                                                            chinr,
+                                                                                                            sharpnr)
     response["stellar"] = is_stellar(response["nearZTF"], response["nearPS1"], response["stellarZTF"], response["stellarPS1"])
     # number of detections and dubious detections
     response["ndet"] = df.shape[0]
@@ -279,13 +286,13 @@ def apply_object_stats_df(corrected, magstats, step_name=None):
 def do_dmdt(nd, magstats, dt_min=0.5):
     response = {}
     nd.reset_index(inplace=True)
-    mjd_first = magstats.first_mjd.iloc[0]
+    mjd_first = magstats.first_mjd.iloc[0] if isinstance(magstats, pd.DataFrame) else magstats.first_mjd
     mask = nd.mjd < mjd_first - dt_min
     response["close_nondet"] = nd.loc[mask].mjd.max() < nd.loc[nd.mjd < mjd_first].mjd.max()
     # is there some non-detection before the first detection
     if mask.sum() > 0:
-        magpsf_first = magstats.magpsf_first.iloc[0]
-        sigmapsf_first = magstats.sigmapsf_first.iloc[0]
+        magpsf_first = magstats.magpsf_first.iloc[0] if isinstance(magstats, pd.DataFrame) else magstats.magpsf_first
+        sigmapsf_first = magstats.sigmapsf_first.iloc[0] if isinstance(magstats, pd.DataFrame) else magstats.sigmapsf_first
         # assume the worst case
         dm_sigma, dt, dmsigdt = dmdt(magpsf_first,
                                      sigmapsf_first,

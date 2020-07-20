@@ -209,6 +209,7 @@ def apply_mag_stats(df, distnr= None, distpsnr1 = None, sgscore1 = None, chinr =
     response["magpsf_median"] = df.magpsf.median()
     response["magpsf_max"] = df.magpsf.max()
     response["magpsf_min"] = df.magpsf.min()
+    response["sigmapsf"] = df.magpsf.std()
     response["magpsf_first"] = df.loc[idxmin].magpsf
     response["sigmapsf_first"] = df.loc[idxmin].sigmapsf
     response["magpsf_last"] = df.loc[idxmax].magpsf
@@ -218,6 +219,7 @@ def apply_mag_stats(df, distnr= None, distpsnr1 = None, sgscore1 = None, chinr =
     response["magpsf_corr_median"] = df.magpsf_corr.median()
     response["magpsf_corr_max"] = df.magpsf_corr.max()
     response["magpsf_corr_min"] = df.magpsf_corr.min()
+    response["sigmapsf_corr"] = df.magpsf_corr.std()
     response["magpsf_corr_first"] = df.loc[idxmin].magpsf_corr
     response["magpsf_corr_last"] = df.loc[idxmax].magpsf_corr
 
@@ -226,6 +228,7 @@ def apply_mag_stats(df, distnr= None, distpsnr1 = None, sgscore1 = None, chinr =
     response["magap_median"] = df.magap.median()
     response["magap_max"] = df.magap.max()
     response["magap_min"] = df.magap.min()
+    response["sigmap"] = df.magap.std()
     response["magap_first"] = df.loc[idxmin].magap
     response["magap_last"] = df.loc[idxmax].magap
 

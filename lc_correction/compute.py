@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import logging
-from joblib import Parallel, delayed
 
 DISTANCE_THRESHOLD = 1.4
 SCORE_THRESHOLD = 0.4
@@ -179,8 +178,8 @@ def apply_correction_df(df, parallel=False):
 def apply_mag_stats(df):
     response = {}
     # minimum and maximum candid
-    idxmin = df.index.min()
-    idxmax = df.index.max()
+    idxmin = df.mjd.idxmin()
+    idxmax = df.mjd.idxmax()
 
     # corrected at the first detection?
     response['corrected'] = df.loc[idxmin]["corrected"]
@@ -319,8 +318,3 @@ def do_dmdt_df(magstats, non_dets):
             resp["objectId"], resp["fid"] = idx[0], idx[1]
             result.append(resp)
     return pd.DataFrame.from_records(result, index=["objectId", "fid"])
-
-
-def apply_parallel(df_groups, func, n=1):
-    response = Parallel(n_jobs=n)(delayed(func)(group) for name, group in df_groups)
-    return pd.concat(response)

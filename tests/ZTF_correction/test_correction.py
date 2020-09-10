@@ -147,3 +147,16 @@ class TestDataframeCorrectionChain(unittest.TestCase):
         self.assertEqual(len(dmdt.index.levels[0]), 10)
         self.assertEqual(len(dmdt), 16)
         self.assertEqual(dmdt.close_nondet.sum(), 1)
+
+    def test_apply_parallel(self):
+        detections = self.detections.groupby(["objectId", "fid"])
+        corrected = apply_parallel(detections, apply_correction_df)
+        self.assertEqual(len(self.detections), len(corrected))
+
+    def test_apply_correction_parallel(self):
+        parallel_coorrection = lambda x: apply_correction(x,parallel=True)
+        corrected = self.detections.groupby(["objectId", "fid"]).apply(apply_correction_df)
+        for col in self.corrected_cols:
+            self.assertIn(col, corrected.columns)
+        self.assertEqual(len(corrected.index.levels[0]), self.unique_objects)
+        self.assertEqual(corrected.corrected.values.sum(), 1373)

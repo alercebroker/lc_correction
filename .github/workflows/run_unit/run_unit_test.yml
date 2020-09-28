@@ -1,0 +1,32 @@
+name: tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+    
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: install
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+          pip install coverage
+          pip install pyarrow
+          
+      - name: script
+        run: coverage run --source lc_correction -m unittest tests/run_tests.py
+        
+      - name: after
+        run: |
+          bash <(curl -s https://codecov.io/bash)
+          coverage xml | bash <(curl -Ls https://coverage.codacy.com/get.sh) report -r coverage.xml

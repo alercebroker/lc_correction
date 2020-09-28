@@ -1,7 +1,6 @@
 import os
 import fastavro
 import unittest
-import pandas as pd
 
 from lc_correction.compute import *
 
@@ -38,19 +37,6 @@ class TestZTF18aazxcwf(unittest.TestCase):
         self.is_first_detection = {"object": True, 1: True, 2: True}
         self.first_magnr = {}
         self.stellar_object = False
-
-    # Validate object to a RRL object
-    def test_validate_object(self):
-        data = self.avros[0]
-        fid = data["candidate"]["fid"]
-
-        if self.is_first_detection[fid]:
-            self.first_magnr[fid] = data["candidate"]["magnr"]
-
-        stellar_object, stellar_magstats = validate_object(data["candidate"], self.is_first_detection[fid], self.stellar_object)
-        self.stellar_object = stellar_object
-        self.assertTrue(stellar_object)
-        self.assertTrue(stellar_magstats)
 
     def test_correction(self):
         candidate = self.avros[0]["candidate"]

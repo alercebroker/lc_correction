@@ -2,12 +2,12 @@ import numpy as np
 import pandas as pd
 import logging
 
-DISTANCE_THRESHOLD = 1.4
-SCORE_THRESHOLD = 0.4
-CHINR_THRESHOLD = 2
-SHARPNR_MAX = 0.1
-SHARPNR_MIN = -0.13
-ZERO_MAG = 100.
+DISTANCE_THRESHOLD = 1.4  #: max threshold for distnr
+SCORE_THRESHOLD = 0.4  #: max threshold for sgscore
+CHINR_THRESHOLD = 2  #: max threshold for chinr
+SHARPNR_MAX = 0.1  #: max value for sharpnr
+SHARPNR_MIN = -0.13  #: min value for sharpnr
+ZERO_MAG = 100.  #: default value for zero magnitude (a big value!)
 TRIPLE_NAN = (np.nan, np.nan, np.nan)
 
 logging.basicConfig(level=logging.INFO,
@@ -15,30 +15,31 @@ logging.basicConfig(level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S',)
 
 
-def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos, oid=None, candid=None):
-    """Do correction in psf magnitude
+def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos, oid=None):
+    """
+    Correction function. Implement of correction formula.
 
-    Parameters
-    ----------
-    magnr : :py:class:`float`
-            Magnitude of nearest source in reference image PSF-catalog within 30 arcsec [mag]
-    magpsf : :py:class:`float`
-            Magnitude from PSF-fit photometry [mag]
-    sigmagnr : :py:class:`float`
-            1-sigma uncertainty in magnr within 30 arcsec [mag]
-    sigmapsf : :py:class:`float`
-            1-sigma uncertainty in magpsf [mag]
-    isdiffpos : :py:class:`int`
-            t or 1 => candidate is from positive (sci minus ref) subtraction; f or 0 => candidate is from negative (ref minus sci) subtraction
-    oid : :py:class:`str`
-            Identifier of the object
-    candid : :py:class:`str`
-            Identifier of detection
+    :param magnr: Magnitude of nearest source in reference image PSF-catalog within 30 arcsec [mag]
+    :type magnr: float
 
-    Returns
-    -------
-    :py:class:`string`
-        Tuple -> magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
+    :param magpsf: Magnitude from PSF-fit photometry [mag]
+    :type magpsf: float
+
+    :param sigmagnr: 1-sigma uncertainty in magnr within 30 arcsec [mag]
+    :type sigmagnr: float
+
+    :param sigmapsf: 1-sigma uncertainty in magpsf [mag]
+    :type sigmapsf: float
+
+    :param isdiffpos: 1 => candidate is from positive (sci minus ref) subtraction; 0 => candidate is from negative (ref minus sci) subtraction
+    :type isdiffpos: int
+
+    :return: Correction for magnitude, sigma and sigma_ext
+    :rtype: tuple
+
+    Example::
+
+        (m_corr, s_corr, s_corr_ext) = correction(a, b, c, d, e)
     """
     if magnr < 0 or magpsf < 0:
         return TRIPLE_NAN
@@ -70,16 +71,18 @@ def correction(magnr, magpsf, sigmagnr, sigmapsf, isdiffpos, oid=None, candid=No
 
 
 def apply_correction(candidate):
-    """Do correction for a group of detections of the same object.
+    """
+    Correction function for a set of detections
 
-    Parameters
-    ----------
-    candidate : :py:class:`pd.DataFrame`
-                A dataframe with detections of a candidate.
-    Returns
-    -------
-    :py:class:`tuple`
-        Tuple -> magpsf_corr, sigmapsf_corr, sigmapsf_corr_ext
+    :param candidate: A dataframe with detections of a candidate.
+    :type candidate: :py:class:`pd.DataFrame`
+
+    :return: Wrapper for correction for magnitude, sigma and sigma_ext
+    :rtype: tuple
+
+    Example::
+
+        (m_corr, s_corr, s_corr_ext) = correction(a, b, c, d, e)
     """
     isdiffpos = 1 if (candidate["isdiffpos"] in ["t", "1"]) else -1
     magnr = candidate["magnr"]
@@ -93,26 +96,29 @@ def apply_correction(candidate):
 
 
 def near_stellar(first_distnr, first_distpsnr1, first_sgscore1, first_chinr, first_sharpnr):
-    """Get if object is near stellar
-
-    Parameters
-    ----------
-    first_distnr : :py:class:`float`
-            Distance to nearest source in reference image PSF-catalog within 30 arcsec [pixels]
-    first_distpsnr1 : :py:class:`float`
-            Distance of closest source from PS1 catalog; if exists within 30 arcsec [arcsec]
-    first_sgscore1 : :py:class:`float`
-            Star/Galaxy score of closest source from PS1 catalog 0 <= sgscore <= 1 where closer to 1 implies higher likelihood of being a star
-    first_chinr : :py:class:`float`
-            DAOPhot chi parameter of nearest source in reference image PSF-catalog within 30 arcsec
-    first_sharpnr : :py:class:`float`
-            DAOPhot sharp parameter of nearest source in reference image PSF-catalog within 30 arcsec
-
-    Returns
-    -------
-    :py:class:`bool`
-        Tuple -> nearZTF, nearPS1, stellarPS1, stellarZTF
     """
+    Get if object is near stellar
+
+    :param first_distnr: Distance to nearest source in reference image PSF-catalog within 30 arcsec [pixels]
+    :type first_distnr: :py:class:`float`
+
+    :param first_distpsnr1: Distance of closest source from PS1 catalog; if exists within 30 arcsec [arcsec]
+    :type first_distpsnr1: :py:class:`float`
+
+    :param first_sgscore1: Star/Galaxy score of closest source from PS1 catalog 0 <= sgscore <= 1 where closer to 1 implies higher likelihood of being a star
+    :type first_sgscore1: :py:class:`float`
+
+    :param first_chinr: DAOPhot chi parameter of nearest source in reference image PSF-catalog within 30 arcsec
+    :type first_chinr: :py:class:`float`
+
+    :param first_sharpnr: DAOPhot sharp parameter of nearest source in reference image PSF-catalog within 30 arcsec
+    :type first_sharpnr: :py:class:`float`
+
+
+    :return: if the object is near stellar
+    :rtype: tuple
+    """
+
     nearZTF = 0 <= first_distnr < DISTANCE_THRESHOLD
     nearPS1 = 0 <= first_distpsnr1 < DISTANCE_THRESHOLD
     stellarPS1 = first_sgscore1 > SCORE_THRESHOLD
@@ -121,17 +127,24 @@ def near_stellar(first_distnr, first_distpsnr1, first_sgscore1, first_chinr, fir
 
 
 def is_stellar(nearZTF, nearPS1, stellarPS1, stellarZTF):
-    """Get if object is stellar
+    """
+    Get if object is stellar
 
-    Parameters
-    ----------
-    nearZTF : :py:class:`bool`
-    nearPS1 : :py:class:`bool`
-    stellarPS1 : :py:class:`bool`
-    stellarZTF : :py:class:`bool`
-    Returns
-    -------
-    :py:class:`bool`
+    :param nearZTF:
+    :type nearZTF: bool
+
+    :param nearPS1:
+    :type nearPS1: bool
+
+    :param stellarPS1:
+    :type stellarPS1: bool
+
+    :param stellarZTF:
+    :type stellarZTF: bool
+
+    :return: if the object is stellar
+    :rtype: bool
+
     """
     return (nearZTF & nearPS1 & stellarPS1) | (nearZTF & ~nearPS1 & stellarZTF)
 
@@ -139,32 +152,50 @@ def is_stellar(nearZTF, nearPS1, stellarPS1, stellarZTF):
 def is_dubious(corrected, isdiffpos, corr_magstats):
     """Get if object is dubious
 
-    Parameters
-    ----------
-    corrected : :py:class:`bool`
-    isdiffpos : :py:class:`bool`
-    corr_magstats : :py:class:`bool`
-    Returns
-    -------
-    :py:class:`bool`
+    :param corrected:
+    :type corrected: bool
+
+    :param isdiffpos:
+    :type isdiffpos: bool
+
+    :param corr_magstats:
+    :type corr_magstats: bool
+
+    :return: if the object is dubious
+    :rtype: bool
     """
     return (~corrected & (isdiffpos == -1)) | (corr_magstats & ~corrected) | (~corr_magstats & corrected)
 
 
 def dmdt(magpsf_first, sigmapsf_first, nd_diffmaglim, mjd_first, nd_mjd):
-    """Calculate dmdt
+    """
+    Calculate dm/dt
 
-    Parameters
-    ----------
-    magpsf_first : :py:class:`float`
-    sigmapsf_first : :py:class:`float`
-    nd_diffmaglim : :py:class:`float`
-    mjd_first : :py:class:`float`
-    nd_mjd  : :py:class:`float`
-    Returns
-    -------
-    :py:class:`tuple`
-        Tuple -> dm_sigma, dt, dmsigdt
+    :param magpsf_first:
+    :type magpsf_first: float
+
+    :param sigmapsf_first:
+    :type sigmapsf_first: float
+
+    :param nd_diffmaglim:
+    :type nd_diffmaglim: float
+
+    :param mjd_first:
+    :type mjd_first: float
+
+    :param nd_mjd:
+    :type nd_mjd: float
+
+    :return: dm_sigma, dt, dmsigdt
+    :rtype: tuple
+
+    Example::
+
+        dm_sigma, dt, dmsigdt = dmdt(magpsf_first,
+                                     sigmapsf_first,
+                                     nd.diffmaglim,
+                                     mjd_first,
+                                     nd.mjd)
     """
     dm_sigma = magpsf_first + sigmapsf_first - nd_diffmaglim
     dt = mjd_first - nd_mjd
@@ -172,20 +203,21 @@ def dmdt(magpsf_first, sigmapsf_first, nd_diffmaglim, mjd_first, nd_mjd):
     return dm_sigma, dt, dmsigdt
 
 
-def apply_correction_df(df, parallel=False):
-    """Calculate dmdt for a group of detections
-
-    Parameters
-    ----------
-    df : :py:class:`pd.DataFrame`
-    parallel : :py:class:`bool`
-    Returns
-    -------
-    :py:class:`pd.DataFrame`
-        Tuple -> dm_sigma, dt, dmsigdt
+def apply_correction_df(df):
     """
-    # create copy of dataframe
-    # df = data.copy()
+    Correction function for a set of detections with the same object id and filter id. Use with pd.DataFrame.apply(this)
+
+    :param df: A dataframe with detections of a candidate.
+    :type df: :py:class:`pd.DataFrame`
+
+    :return: A pandas dataframe with detections corrected
+    :rtype: :py:class:`pd.DataFrame`
+
+    Example::
+
+        corrected = detections.groupby(["objectId", "fid"]).apply(apply_correction_df)
+    """
+
     df.set_index("candid", inplace=True)
 
     df['isdiffpos'] = df['isdiffpos'].map({'t': 1., 'f': -1., '1': 1., '0': -1.})
@@ -199,12 +231,32 @@ def apply_correction_df(df, parallel=False):
 
     corr_magstats = df.loc[df.index.min()]["corrected"]
     df["dubious"] = is_dubious(df["corrected"], df['isdiffpos'], corr_magstats)
-    if parallel:
-        return df
     return df.drop(["objectId", "fid"], axis=1)
 
 
 def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, sharpnr=None):
+    """
+    :param df: A dataframe with corrected detections of a candidate.
+    :type df: :py:class:`pd.DataFrame`
+
+    :param distnr:
+    :type distnr: float
+
+    :param distpsnr1:
+    :type distpsnr1: float
+
+    :param sgscore1:
+    :type sgscore1: float
+
+    :param chinr:
+    :type chinr: float
+
+    :param sharpnr:
+    :type sharpnr: float
+
+    :return: A pandas dataframe with magnitude statistics
+    :rtype: :py:class:`pd.DataFrame`
+    """
     response = {}
     # minimum and maximum candid
     idxmin = df.mjd.idxmin()
@@ -267,6 +319,13 @@ def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, 
 
 
 def apply_objstats_from_correction(df):
+    """
+    :param df: A dataframe with corrected detections of a candidate.
+    :type df: :py:class:`pd.DataFrame`
+
+    :return: A pandas series with statistics of an object
+    :rtype: :py:class:`pd.Series`
+    """
     response = {}
     idxmax = df.mjd.idxmax()
     response["ndethist"] = df.loc[idxmax].ndethist
@@ -284,6 +343,13 @@ def apply_objstats_from_correction(df):
 
 
 def apply_objstats_from_magstats(df):
+    """
+    :param df: A dataframe with magnitude statistics.
+    :type df: :py:class:`pd.DataFrame`
+
+    :return: A pandas series with statistics of an object
+    :rtype: :py:class:`pd.Series`
+    """
     response = {}
     response["nearZTF"] = df.nearZTF.all()
     response["nearPS1"] = df.nearPS1.all()
@@ -308,6 +374,20 @@ def apply_objstats_from_magstats(df):
 
 
 def apply_object_stats_df(corrected, magstats, step_name=None):
+    """
+    :param corrected: A dataframe with corrected detections.
+    :type corrected: :py:class:`pd.DataFrame`
+
+    :param magstats: A dataframe with magnitude statistics.
+    :type magstats: :py:class:`pd.DataFrame`
+
+    :param step_name:
+    :type step_name: string
+
+
+    :return: Object statistics in a dataframe
+    :rtype: :py:class:`pd.DataFrame`
+    """
     basic_stats = corrected.groupby("objectId").apply(apply_objstats_from_correction)
     obj_magstats = magstats.groupby("objectId").apply(apply_objstats_from_magstats)
     basic_stats['step_id_corr'] = 'corr_bulk_0.0.1' if step_name is None else step_name
@@ -315,6 +395,19 @@ def apply_object_stats_df(corrected, magstats, step_name=None):
 
 
 def do_dmdt(nd, magstats, dt_min=0.5):
+    """
+    :param nd:  A dataframe with non detections.
+    :type nd: :py:class:`pd.DataFrame`
+
+    :param magstats:  A dataframe with magnitude statistics.
+    :type magstats: :py:class:`pd.DataFrame`
+
+    :param dt_min:
+    :type dt_min: float
+
+    :return: Compute of dmdt of an object
+    :rtype: :py:class:`pd.Series`
+    """
     response = {}
     nd.reset_index(inplace=True)
     mjd_first = magstats.first_mjd.iloc[0] if isinstance(magstats, pd.DataFrame) else magstats.first_mjd
@@ -345,6 +438,17 @@ def do_dmdt(nd, magstats, dt_min=0.5):
 
 
 def do_dmdt_df(magstats, non_dets):
+    """
+    :param magstats:  A dataframe with magnitude statistics.
+    :type magstats: :py:class:`pd.DataFrame`
+
+    :param non_dets:  A dataframe with non detections.
+    :type non_dets: :py:class:`pd.DataFrame`
+
+
+    :return: Compute of dmdt of an object in a dataframe
+    :rtype: :py:class:`pd.DataFrame`
+    """
     g_mags = magstats.groupby(["objectId", "fid"])
     g_nd = non_dets.groupby(["objectId", "fid"])
     idxs = g_mags.indices.keys()

@@ -23,3 +23,63 @@ For development:
 ```bash
 pip install -e .
 ```
+
+## Main features
+
+- Do correction to a lightcurve.
+- Get magnitude statistics of a lightcurve.
+- Get main statistics of an object.
+
+## Dependencies
+- [NumPy](https://numpy.org/)
+- [Pandas](https://pandas.pydata.org/)
+
+
+## How to use
+
+First you must import some libraries:
+
+```python
+import pandas as pd
+from correction.compute import *
+from correction.helpers import *
+```
+
+The *lc_correction* use a `pandas.DataFrame` for all calculations, you must have a dafaframe for detections and non detections.
+
+```python
+detections = pd.read_parquet(path_to_data)
+non_detections = pd.read_parquet(path_to_data) 
+``` 
+
+First, we need a modified julian dates (in case of you have julian dates).
+
+```
+detections["mjd"] = detections.jd - 2400000.5
+non_detections["mjd"] = non_detections.jd - 2400000.5
+```
+
+
+### Apply correction to detections
+We use a function in for apply function of pandas. So we use `apply_correction_df` function for all unique `[objectId, fid]` pairs.
+
+```
+corrected = detections.groupby(["objectId", "fid"]).apply(apply_correction_df)
+corrected.reset_index(inplace=True)
+```
+
+### Get magnitude statistics
+When you have corrected detections, you can get the magnitude statistics
+
+```
+magstats = corrected.groupby(["objectId", "fid"]).apply(apply_mag_stats)
+magstats.reset_index(inplace=True)
+```
+
+### Get dm/dt
+If you want to get a dm/dy information, only use magstats and non detections.
+```
+dmdt = do_dmdt_df(magstats, non_detections)
+```
+
+

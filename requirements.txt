@@ -3,3 +3,5 @@ fastavro>=0.22.7
 joblib>=0.13.2
 numpy>=1.18.1
 pandas>=0.25.3
+pyarrow
+fastparquet

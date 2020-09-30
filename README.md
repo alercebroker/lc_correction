@@ -1,6 +1,5 @@
-[![Build Status](https://travis-ci.com/alercebroker/lc_correction.svg?token=ky96CzpxxqojpJq8cck6&branch=master)](https://travis-ci.com/alercebroker/lc_correction)
+![unittest](https://github.com/alercebroker/lc_correction/workflows/unittest/badge.svg?branch=main&event=push)
 [![codecov](https://codecov.io/gh/alercebroker/lc_correction/branch/master/graph/badge.svg?token=5C8D7F627W)](https://codecov.io/gh/alercebroker/lc_correction)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/86c0922f3213487c8874d1b71d13e2e5)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=alercebroker/lc_correction&amp;utm_campaign=Badge_Grade)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/alercebroker/lc_correction/blob/master/LICENSE)
 
 # Light curve correction library

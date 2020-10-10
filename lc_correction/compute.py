@@ -291,7 +291,7 @@ def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, 
     response["ndubious"] = df.dubious.sum()
 
     # reference id
-    rfids = df.rfid.unique()
+    rfids = df.rfid.unique().astype(np.float)
     rfids = rfids[~np.isnan(rfids)]
     response["nrfid"] = len(rfids)
 
@@ -435,13 +435,15 @@ def do_dmdt(df, dt_min=0.5):
         magpsf_first = magstat_data.magpsf_first
         sigmapsf_first = magstat_data.sigmapsf_first
         dmdts = dmdt(magpsf_first,
-                                     sigmapsf_first,
-                                     df_masked.diffmaglim,
-                                     mjd_first,
-                                     df_masked.mjd)
+                     sigmapsf_first,
+                     df_masked.diffmaglim,
+                     mjd_first,
+                     df_masked.mjd)
         idxmin = dmdts.dmsigdt.idxmin()
         min_dmdts = dmdts.loc[idxmin]
+        min_dmdts = min_dmdts if isinstance(min_dmdts, pd.Series) else min_dmdts.iloc[0]
         min_nd = df.loc[idxmin]
+        min_nd = min_nd if isinstance(min_nd, pd.Series) else min_nd.iloc[0]
 
         response["dmdt_first"] = min_dmdts.dmsigdt
         response["dm_first"] = magpsf_first - min_nd.diffmaglim
@@ -468,7 +470,7 @@ def do_dmdt_df(magstats, non_dets, dt_min=0.5):
     :rtype: :py:class:`pd.DataFrame`
     """
     magstats.set_index(["objectId", "fid"],inplace=True)
-    non_dets_magstats = non_dets.join(magstats, on=["objectId", "fid"], how="inner")
+    non_dets_magstats = non_dets.join(magstats, on=["objectId", "fid"], how="inner", rsuffix="_stats")
 
     apply_dmdt_df = lambda x: do_dmdt(x, dt_min=dt_min)
     result = non_dets_magstats.groupby(["objectId", "fid"]).apply(apply_dmdt_df)

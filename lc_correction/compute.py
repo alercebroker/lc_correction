@@ -424,9 +424,10 @@ def do_dmdt(df, dt_min=0.5):
     :rtype: :py:class:`pd.Series`
     """
     response = {}
+    df.reset_index(inplace=True)
     magstat_data = df.iloc[0]
     mjd_first = magstat_data.first_mjd
-    mask = df.mjd < mjd_first - dt_min
+    mask = df.mjd < (mjd_first - dt_min)
     df_masked = df.loc[mask]
 
     response["close_nondet"] = df_masked.mjd.max() < df.loc[df.mjd < mjd_first, "mjd"].max()

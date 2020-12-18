@@ -411,7 +411,7 @@ def do_dmdt(nd, magstats, dt_min=0.5):
     response = {}
     nd.reset_index(inplace=True)
     mjd_first = magstats.first_mjd.iloc[0] if isinstance(magstats, pd.DataFrame) else magstats.first_mjd
-    mask = nd.mjd < mjd_first - dt_min
+    mask = (nd.mjd < mjd_first - dt_min) & (nd.diffmaglim > 0)
     response["close_nondet"] = nd.loc[mask].mjd.max() < nd.loc[nd.mjd < mjd_first].mjd.max()
     # is there some non-detection before the first detection
     if mask.sum() > 0:

@@ -9,6 +9,7 @@ SHARPNR_MAX = 0.1  #: max value for sharpnr
 SHARPNR_MIN = -0.13  #: min value for sharpnr
 ZERO_MAG = 100.  #: default value for zero magnitude (a big value!)
 TRIPLE_NAN = (np.nan, np.nan, np.nan)
+MAGNITUDE_THRESHOLD = 13.2
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(name)s.%(funcName)s: %(message)s',
@@ -231,7 +232,24 @@ def apply_correction_df(df):
 
     corr_magstats = df.loc[df.index.min()]["corrected"]
     df["dubious"] = is_dubious(df["corrected"], df['isdiffpos'], corr_magstats)
+    df["mjdendref"] = df["jdendref"] - 2400000.5
     return df.drop(["objectId", "fid"], axis=1)
+
+
+def get_flag_saturation(detections):
+    detections = detections[detections.corrected]
+    total = detections['magpsf_corr'].count()
+    if total == 0:
+        return np.nan
+    satured = (detections["magpsf_corr"] < MAGNITUDE_THRESHOLD).sum()
+    return satured/total
+
+
+def get_flag_reference(detections, first_detection):
+    if len(detections) == 0:
+        return np.nan
+    last_reference = detections["mjdendref"].max()
+    return last_reference < first_detection
 
 
 def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, sharpnr=None):
@@ -315,6 +333,10 @@ def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, 
     # time statistics
     response["first_mjd"] = df.loc[idxmin].mjd
     response["last_mjd"] = df.loc[idxmax].mjd
+
+    # flags
+    response["flag_saturation"] = get_flag_saturation(df)
+    response["flag_reference"] = get_flag_reference(df, response["first_mjd"])
     return pd.Series(response)
 
 
@@ -339,6 +361,9 @@ def apply_objstats_from_correction(df):
     response["firstmjd"] = df.mjd.min()
     response["lastmjd"] = df.loc[idxmax].mjd
     response["deltamjd"] = response["lastmjd"] - response["firstmjd"]
+
+    # flags
+    response["flag_diffpos"] = df.isdiffpos.min() > 0
     return pd.Series(response)
 
 

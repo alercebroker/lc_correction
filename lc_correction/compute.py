@@ -336,7 +336,7 @@ def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, 
 
     # flags
     response["flag_saturation"] = get_flag_saturation(df)
-    response["flag_reference"] = get_flag_reference(df, response["first_mjd"])
+    # response["flag_reference"] = get_flag_reference(df, response["first_mjd"])
     return pd.Series(response)
 
 
@@ -364,6 +364,7 @@ def apply_objstats_from_correction(df):
 
     # flags
     response["flag_diffpos"] = df.isdiffpos.min() > 0
+    response["flag_reference"] = get_flag_reference(df, response["firstmjd"])
     return pd.Series(response)
 
 

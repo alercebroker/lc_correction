@@ -252,7 +252,7 @@ def get_flag_reference(detections, first_detection):
     return last_reference < first_detection
 
 
-def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, sharpnr=None):
+def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, sharpnr=None, flags=False):
     """
     :param df: A dataframe with corrected detections of a candidate.
     :type df: :py:class:`pd.DataFrame`
@@ -271,6 +271,9 @@ def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, 
 
     :param sharpnr:
     :type sharpnr: float
+
+    :param flags: If you want compute flags, set it like True
+    :type flags: boolean
 
     :return: A pandas dataframe with magnitude statistics
     :rtype: :py:class:`pd.DataFrame`
@@ -335,15 +338,18 @@ def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, 
     response["last_mjd"] = df.loc[idxmax].mjd
 
     # flags
-    response["flag_saturation"] = get_flag_saturation(df)
-    # response["flag_reference"] = get_flag_reference(df, response["first_mjd"])
+    if flags:
+        response["flag_saturation"] = get_flag_saturation(df)
     return pd.Series(response)
 
 
-def apply_objstats_from_correction(df):
+def apply_objstats_from_correction(df, flags=False):
     """
     :param df: A dataframe with corrected detections of a candidate.
     :type df: :py:class:`pd.DataFrame`
+
+    :param flags: If you want compute flags, set it like True
+    :type flags: boolean
 
     :return: A pandas series with statistics of an object
     :rtype: :py:class:`pd.Series`
@@ -363,8 +369,9 @@ def apply_objstats_from_correction(df):
     response["deltamjd"] = response["lastmjd"] - response["firstmjd"]
 
     # flags
-    response["flag_diffpos"] = df.isdiffpos.min() > 0
-    response["flag_reference"] = get_flag_reference(df, response["firstmjd"])
+    if flags:
+        response["flag_diffpos"] = df.isdiffpos.min() > 0
+        response["flag_reference"] = get_flag_reference(df, response["firstmjd"])
     return pd.Series(response)
 
 

@@ -201,10 +201,16 @@ def dmdt(magpsf_first, sigmapsf_first, nd_diffmaglim, mjd_first, nd_mjd):
     dm_sigma = magpsf_first + sigmapsf_first - nd_diffmaglim
     dt = mjd_first - nd_mjd
     dmsigdt = (dm_sigma / dt)
-    return dm_sigma, dt, dmsigdt
+    frame = {
+        "dm_sigma": dm_sigma,
+        "dt": dt,
+        "dmsigdt": dmsigdt
+    }
+    df = pd.DataFrame(frame)
+    return df
 
 
-def apply_correction_df(df):
+def apply_correction_df(df, calculate_dubious = False):
     """
     Correction function for a set of detections with the same object id and filter id. Use with pd.DataFrame.apply(this)
 
@@ -229,10 +235,12 @@ def apply_correction_df(df):
         else (np.nan, np.nan, np.nan), axis=1, result_type="expand")
 
     df["magpsf_corr"], df["sigmapsf_corr"], df["sigmapsf_corr_ext"] = correction_results[0], correction_results[1], correction_results[2]
-
-    corr_magstats = df.loc[df.index.min()]["corrected"]
-    df["dubious"] = is_dubious(df["corrected"], df['isdiffpos'], corr_magstats)
     df["mjdendref"] = df["jdendref"] - 2400000.5
+
+    if calculate_dubious:
+        corr_magstats = df.loc[df.index.min()]["corrected"]
+        df["dubious"] = is_dubious(df["corrected"], df['isdiffpos'], corr_magstats)
+
     return df.drop(["objectId", "fid"], axis=1)
 
 
@@ -280,17 +288,20 @@ def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, 
     """
     response = {}
     # minimum and maximum candid
-    idxmin = df.mjd.idxmin()
-    idxmax = df.mjd.idxmax()
+    idxmin = df.mjd.values.argmin()
+    idxmax = df.mjd.values.argmax()
+
+    df_min = df.iloc[idxmin]
+    df_max = df.iloc[idxmax]
 
     # corrected at the first detection?
-    response['corrected'] = df.loc[idxmin]["corrected"]
+    response['corrected'] = df_min["corrected"]
 
-    distnr = df.loc[idxmin].distnr if distnr is None else distnr
-    distpsnr1 = df.loc[idxmin].distpsnr1 if distpsnr1 is None else distpsnr1
-    sgscore1 = df.loc[idxmin].sgscore1 if sgscore1 is None else sgscore1
-    chinr = df.loc[idxmin].chinr if chinr is None else chinr
-    sharpnr = df.loc[idxmin].sharpnr if sharpnr is None else sharpnr
+    distnr = df_min.distnr if distnr is None else distnr
+    distpsnr1 = df_min.distpsnr1 if distpsnr1 is None else distpsnr1
+    sgscore1 = df_min.sgscore1 if sgscore1 is None else sgscore1
+    chinr = df_min.chinr if chinr is None else chinr
+    sharpnr = df_min.sharpnr if sharpnr is None else sharpnr
 
     response["nearZTF"], response["nearPS1"], response["stellarZTF"], response["stellarPS1"] = near_stellar(distnr,
                                                                                                             distpsnr1,
@@ -303,7 +314,9 @@ def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, 
     response["ndubious"] = df.dubious.sum()
 
     # reference id
-    response["nrfid"] = len(df.rfid.dropna().unique())
+    rfids = df.rfid.unique().astype(np.float)
+    rfids = rfids[~np.isnan(rfids)]
+    response["nrfid"] = len(rfids)
 
     # psf magnitude statatistics
     response["magpsf_mean"] = df.magpsf.mean()
@@ -311,9 +324,9 @@ def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, 
     response["magpsf_max"] = df.magpsf.max()
     response["magpsf_min"] = df.magpsf.min()
     response["sigmapsf"] = df.magpsf.std()
-    response["magpsf_first"] = df.loc[idxmin].magpsf
-    response["sigmapsf_first"] = df.loc[idxmin].sigmapsf
-    response["magpsf_last"] = df.loc[idxmax].magpsf
+    response["magpsf_first"] = df_min.magpsf
+    response["sigmapsf_first"] = df_min.sigmapsf
+    response["magpsf_last"] = df_max.magpsf
 
     # psf corrected magnitude statatistics
     response["magpsf_corr_mean"] = df.magpsf_corr.mean()
@@ -321,8 +334,8 @@ def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, 
     response["magpsf_corr_max"] = df.magpsf_corr.max()
     response["magpsf_corr_min"] = df.magpsf_corr.min()
     response["sigmapsf_corr"] = df.magpsf_corr.std()
-    response["magpsf_corr_first"] = df.loc[idxmin].magpsf_corr
-    response["magpsf_corr_last"] = df.loc[idxmax].magpsf_corr
+    response["magpsf_corr_first"] = df_min.magpsf_corr
+    response["magpsf_corr_last"] = df_max.magpsf_corr
 
     # corrected psf magnitude statistics
     response["magap_mean"] = df.magap.mean()
@@ -330,12 +343,12 @@ def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, 
     response["magap_max"] = df.magap.max()
     response["magap_min"] = df.magap.min()
     response["sigmap"] = df.magap.std()
-    response["magap_first"] = df.loc[idxmin].magap
-    response["magap_last"] = df.loc[idxmax].magap
+    response["magap_first"] = df_min.magap
+    response["magap_last"] = df_max.magap
 
     # time statistics
-    response["first_mjd"] = df.loc[idxmin].mjd
-    response["last_mjd"] = df.loc[idxmax].mjd
+    response["first_mjd"] = df_min.mjd
+    response["last_mjd"] = df_max.mjd
 
     # flags
     if flags:
@@ -355,17 +368,21 @@ def apply_objstats_from_correction(df, flags=False):
     :rtype: :py:class:`pd.Series`
     """
     response = {}
-    idxmax = df.mjd.idxmax()
-    response["ndethist"] = df.loc[idxmax].ndethist
-    response["ncovhist"] = df.loc[idxmax].ncovhist
-    response["mjdstarthist"] = df.loc[idxmax].jdstarthist - 2400000.5
-    response["mjdendhist"] = df.loc[idxmax].jdendhist - 2400000.5
-    response["meanra"] = df.ra.mean()
-    response["meandec"] = df.dec.mean()
-    response["sigmara"] = df.ra.std()
-    response["sigmadec"] = df.dec.std()
-    response["firstmjd"] = df.mjd.min()
-    response["lastmjd"] = df.loc[idxmax].mjd
+    df_mjd = df.mjd
+    idxmax = df_mjd.values.argmax()
+    df_max = df.iloc[idxmax]
+    df_ra = df.ra
+    df_dec = df.dec
+    response["ndethist"] = df_max.ndethist
+    response["ncovhist"] = df_max.ncovhist
+    response["mjdstarthist"] = df_max.jdstarthist - 2400000.5
+    response["mjdendhist"] = df_max.jdendhist - 2400000.5
+    response["meanra"] = df_ra.mean()
+    response["meandec"] = df_dec.mean()
+    response["sigmara"] = df_ra.std()
+    response["sigmadec"] = df_dec.std()
+    response["firstmjd"] = df_mjd.min()
+    response["lastmjd"] = df_max.mjd
     response["deltamjd"] = response["lastmjd"] - response["firstmjd"]
 
     # flags
@@ -373,7 +390,6 @@ def apply_objstats_from_correction(df, flags=False):
         response["diffpos"] = df.isdiffpos.min() > 0
         response["reference_change"] = get_flag_reference(df, response["firstmjd"])
     return pd.Series(response)
-
 
 def apply_objstats_from_magstats(df):
     """
@@ -392,8 +408,9 @@ def apply_objstats_from_magstats(df):
     response["ndubious"] = df.ndubious.sum()  # sum of dubious corrections in all bands
     fids = df.fid.unique()
     if 1 in fids and 2 in fids:
-        g = df[df["fid"] == 1].T.squeeze()
-        r = df[df["fid"] == 2].T.squeeze()
+        df.set_index("fid", inplace=True)
+        g = df.loc[1]
+        r = df.loc[2]
         response["g-r_max"] = g["magpsf_min"] - r["magpsf_min"]  # 1=g ; 2=r
         response["g-r_max_corr"] = g["magpsf_corr_min"] - r["magpsf_corr_min"]
         response["g-r_mean"] = g["magpsf_mean"] - r["magpsf_mean"]
@@ -427,7 +444,7 @@ def apply_object_stats_df(corrected, magstats, step_name=None):
     return basic_stats.join(obj_magstats)
 
 
-def do_dmdt(nd, magstats, dt_min=0.5):
+def do_dmdt(df, dt_min=0.5):
     """
     :param nd:  A dataframe with non detections.
     :type nd: :py:class:`pd.DataFrame`
@@ -442,35 +459,41 @@ def do_dmdt(nd, magstats, dt_min=0.5):
     :rtype: :py:class:`pd.Series`
     """
     response = {}
-    nd.reset_index(inplace=True)
-    mjd_first = magstats.first_mjd.iloc[0] if isinstance(magstats, pd.DataFrame) else magstats.first_mjd
-    mask = (nd.mjd < mjd_first - dt_min) & (nd.diffmaglim > 10)
-    response["close_nondet"] = nd.loc[mask].mjd.max() < nd.loc[nd.mjd < mjd_first].mjd.max()
+    df.reset_index(inplace=True)
+    magstat_data = df.iloc[0]
+    mjd_first = magstat_data.first_mjd
+    mask = df.mjd < (mjd_first - dt_min)
+    df_masked = df.loc[mask]
+
+    response["close_nondet"] = df_masked.mjd.max() < df.loc[df.mjd < mjd_first, "mjd"].max()
     # is there some non-detection before the first detection
     if mask.sum() > 0:
-        magpsf_first = magstats.magpsf_first.iloc[0] if isinstance(magstats, pd.DataFrame) else magstats.magpsf_first
-        sigmapsf_first = magstats.sigmapsf_first.iloc[0] if isinstance(magstats, pd.DataFrame) else magstats.sigmapsf_first
-        # assume the worst case
-        dm_sigma, dt, dmsigdt = dmdt(magpsf_first,
-                                     sigmapsf_first,
-                                     nd.loc[mask].diffmaglim,
-                                     mjd_first,
-                                     nd.loc[mask].mjd)
-        idxmin = dmsigdt.idxmin()
-        response["dmdt_first"] = dmsigdt.loc[idxmin]
-        response["dm_first"] = magpsf_first - nd.diffmaglim.loc[idxmin]
-        response["sigmadm_first"] = sigmapsf_first - nd.diffmaglim.loc[idxmin]
-        response["dt_first"] = dt.loc[idxmin]
+        magpsf_first = magstat_data.magpsf_first
+        sigmapsf_first = magstat_data.sigmapsf_first
+        dmdts = dmdt(magpsf_first,
+                     sigmapsf_first,
+                     df_masked.diffmaglim,
+                     mjd_first,
+                     df_masked.mjd)
+        idxmin = dmdts.dmsigdt.idxmin()
+        min_dmdts = dmdts.loc[idxmin]
+        min_dmdts = min_dmdts if isinstance(min_dmdts, pd.Series) else min_dmdts.iloc[0]
+        min_nd = df.loc[idxmin]
+        min_nd = min_nd if isinstance(min_nd, pd.Series) else min_nd.iloc[0]
+
+        response["dmdt_first"] = min_dmdts.dmsigdt
+        response["dm_first"] = magpsf_first - min_nd.diffmaglim
+        response["sigmadm_first"] = sigmapsf_first - min_nd.diffmaglim
+        response["dt_first"] = min_dmdts["dt"]
     else:
         response["dmdt_first"] = np.nan
         response["dm_first"] = np.nan
         response["sigmadm_first"] = np.nan
         response["dt_first"] = np.nan
-
     return pd.Series(response)
 
 
-def do_dmdt_df(magstats, non_dets):
+def do_dmdt_df(magstats, non_dets, dt_min=0.5):
     """
     :param magstats:  A dataframe with magnitude statistics.
     :type magstats: :py:class:`pd.DataFrame`
@@ -482,15 +505,10 @@ def do_dmdt_df(magstats, non_dets):
     :return: Compute of dmdt of an object in a dataframe
     :rtype: :py:class:`pd.DataFrame`
     """
-    g_mags = magstats.groupby(["objectId", "fid"])
-    g_nd = non_dets.groupby(["objectId", "fid"])
-    idxs = g_mags.indices.keys()
-    result = []
-    for idx in idxs:
-        if idx in g_nd.indices.keys():
-            non_dets_g = g_nd.get_group(idx)
-            magstats_g = g_mags.get_group(idx)
-            resp = do_dmdt(non_dets_g, magstats_g)
-            resp["objectId"], resp["fid"] = idx[0], idx[1]
-            result.append(resp)
-    return pd.DataFrame.from_records(result, index=["objectId", "fid"])
+    magstats.set_index(["objectId", "fid"],inplace=True)
+    non_dets_magstats = non_dets.join(magstats, on=["objectId", "fid"], how="inner", rsuffix="_stats")
+
+    apply_dmdt_df = lambda x: do_dmdt(x, dt_min=dt_min)
+    result = non_dets_magstats.groupby(["objectId", "fid"]).apply(apply_dmdt_df)
+    magstats.reset_index(inplace=True)
+    return result

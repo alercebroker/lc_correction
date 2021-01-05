@@ -423,7 +423,7 @@ def apply_objstats_from_magstats(df):
     return pd.Series(response)
 
 
-def apply_object_stats_df(corrected, magstats, step_name=None):
+def apply_object_stats_df(corrected, magstats, step_name=None, flags=False):
     """
     :param corrected: A dataframe with corrected detections.
     :type corrected: :py:class:`pd.DataFrame`
@@ -438,7 +438,7 @@ def apply_object_stats_df(corrected, magstats, step_name=None):
     :return: Object statistics in a dataframe
     :rtype: :py:class:`pd.DataFrame`
     """
-    basic_stats = corrected.groupby("objectId").apply(apply_objstats_from_correction)
+    basic_stats = corrected.groupby("objectId").apply(apply_objstats_from_correction, flags=flags)
     obj_magstats = magstats.groupby("objectId").apply(apply_objstats_from_magstats)
     basic_stats['step_id_corr'] = 'corr_bulk_0.0.1' if step_name is None else step_name
     return basic_stats.join(obj_magstats)

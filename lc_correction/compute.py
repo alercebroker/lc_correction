@@ -257,7 +257,7 @@ def get_flag_reference(detections, first_detection):
     if len(detections) == 0:
         return np.nan
     last_reference = detections["mjdendref"].max()
-    return last_reference < first_detection
+    return last_reference > first_detection
 
 
 def apply_mag_stats(df, distnr=None, distpsnr1=None, sgscore1=None, chinr=None, sharpnr=None, flags=False):

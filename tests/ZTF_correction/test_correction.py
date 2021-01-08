@@ -52,7 +52,7 @@ class TestDataframeCorrection(unittest.TestCase):
         self.data = pd.read_csv(os.path.join(CSV_PATH, "raw_detections.csv"))
 
     def test_apply_correction_df_c1(self):
-        dflarge = self.data.groupby(["objectId", "fid"]).apply(apply_correction_df)
+        dflarge = self.data.groupby(["objectId", "fid"]).apply(apply_correction_df ,calculate_dubious=True)
         dubious = dflarge.loc[dflarge.dubious]
         self.assertEqual(len(dubious), 1)
         self.assertTrue(dubious.dubious.values[0])
@@ -60,7 +60,7 @@ class TestDataframeCorrection(unittest.TestCase):
     def test_apply_correction_df_c2(self):
         data = self.data.copy()
         data.at[180, "isdiffpos"] = 'f'
-        dflarge = data.groupby(["objectId", "fid"]).apply(apply_correction_df)
+        dflarge = data.groupby(["objectId", "fid"]).apply(apply_correction_df, calculate_dubious=True)
         dubious = dflarge.loc[dflarge.dubious]
         example = dubious.iloc[1]
         self.assertEqual(len(dubious), 2)
@@ -70,7 +70,7 @@ class TestDataframeCorrection(unittest.TestCase):
     def test_apply_correction_df_c3(self):
         data = self.data.copy()
         data.at[150, "distnr"] = 0.1
-        dflarge = data.groupby(["objectId", "fid"]).apply(apply_correction_df)
+        dflarge = data.groupby(["objectId", "fid"]).apply(apply_correction_df, calculate_dubious=True)
         dubious = dflarge.loc[dflarge.dubious]
         example = dubious.iloc[1]
         self.assertEqual(len(dubious), 2)
@@ -108,7 +108,7 @@ class TestDataframeCorrectionChain(unittest.TestCase):
         self.assertEqual(unique_non_detections, self.unique_objects)
 
     def test_apply_correction_df(self):
-        corrected = self.detections.groupby(["objectId", "fid"]).apply(apply_correction_df)
+        corrected = self.detections.groupby(["objectId", "fid"]).apply(apply_correction_df, calculate_dubious=True)
         for col in self.corrected_cols:
             self.assertIn(col, corrected.columns)
         self.assertEqual(len(corrected.index.levels[0]), self.unique_objects)

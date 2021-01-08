@@ -26,6 +26,6 @@ class TestHelpersCorrectionChain(unittest.TestCase):
         self.assertEqual(len(result), 16)
 
     def test_helpers_clean_corrected(self):
-        corrected = self.detections.groupby(["objectId", "fid"]).apply(apply_correction_df)
+        corrected = self.detections.groupby(["objectId", "fid"]).apply(apply_correction_df, calculate_dubious=True)
         corrected = get_clean_corrected(corrected)
         self.assertEqual(len(corrected), 1381)
